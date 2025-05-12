@@ -1,0 +1,16 @@
+[tool.poetry]
+name = "pawfs"
+version = "0.1.0"
+description = "Utility for accessing files on sharepoint / other places from our pipelines."
+authors = ["partvishegy <venczeli.jozsef@budapest.hu>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = ">=3.10,<3.11"
+msal = "^1.32.3"
+office365-rest-python-client = "^2.6.2"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
