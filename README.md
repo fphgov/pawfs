@@ -7,4 +7,4 @@ And Sites.ReadWrite.All or similar permission for msgraph!
     (not sharepoint: that can not really be reached by robots any more.)
 
 ### How to use the sdk for sharepoint sites:
-https://github.com/microsoftgraph/msgraph-sdk-python/blob/main/docs/drives_samples.md
+https://github.com/microsoftgraph/msgraph-sdk-python/blob/main/docs/drives_samples.md - this is outdated. 
