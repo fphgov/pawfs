@@ -75,18 +75,73 @@ async def get_drive_folders(client, drive_id):
         import traceback
         traceback.print_exc()
 
+from msgraph.generated.models.drive_item import DriveItem
+from msgraph.generated.models.folder import Folder
+from msgraph.generated.models.file import File
+
+async def create_folder_and_file(client, drive_id, folder_name, file_name, file_content):
+    try:
+        # Step 1: Create a new folder in the root of the drive
+        print(f"Creating folder '{folder_name}' in drive ID: {drive_id}")
+        new_folder = DriveItem(
+            name=folder_name,
+            folder=Folder(),  # Explicitly define the folder facet
+            additional_data={"@microsoft.graph.conflictBehavior": "rename"}
+        )
+        folder = await client.drives.by_drive_id(drive_id).items.by_drive_item_id("root").children.post(new_folder)
+        print(f"Created folder: {folder.name} (ID: {folder.id})")
+
+        # Step 2: Create a new .txt file inside the folder
+        print(f"Creating file '{file_name}' in folder ID: {folder.id}")
+        new_file = DriveItem(
+            name=file_name,
+            file=File(),  # Explicitly define the file facet
+            additional_data={"@microsoft.graph.conflictBehavior": "replace"}
+        )
+        file_item = await client.drives.by_drive_id(drive_id).items.by_drive_item_id(folder.id).children.post(new_file)
+        print(f"Created file metadata: {file_item.name} (ID: {file_item.id})")
+
+        # Step 3: Upload content to the file
+        await client.drives.by_drive_id(drive_id).items.by_drive_item_id(file_item.id).content.put(file_content)
+        print(f"Uploaded content to file: {file_item.name} (ID: {file_item.id})")
+    except Exception as e:
+        print(f"An error occurred while creating folder and file: {e}")
+        import traceback
+        traceback.print_exc()
+
+# async def main():
+#     # Connect to SharePoint and get the graph client, site, and drives
+#     graph_client, site, drives = await connect_to_sharepoint()
+#     if graph_client and site and drives:
+#         print("Graph client, site, and drives successfully retrieved.")
+
+#         # List folders in the first drive
+#         drive_id = drives.value[0].id if drives.value else None
+#         if drive_id:
+#             await get_drive_folders(graph_client, drive_id)
+#         else:
+#             print("No drives found.")
+#     else:
+#         print("Failed to retrieve all necessary components.")
+
 async def main():
     # Connect to SharePoint and get the graph client, site, and drives
     graph_client, site, drives = await connect_to_sharepoint()
     if graph_client and site and drives:
         print("Graph client, site, and drives successfully retrieved.")
 
-        # List folders in the first drive
-        drive_id = drives.value[0].id if drives.value else None
-        if drive_id:
-            await get_drive_folders(graph_client, drive_id)
+        # Find the Documents drive
+        documents_drive = next((drive for drive in drives.value if drive.name == "Documents"), None)
+        if documents_drive:
+            drive_id = documents_drive.id
+
+            # Create a folder and a file
+            folder_name = "GeneratedFolder"
+            file_name = "message.txt"
+            file_content = "Szia Kriszti, ezt most generáltam.\nÜdv,\nRobot"
+            await create_folder_and_file(graph_client, drive_id, folder_name, file_name, file_content)
         else:
-            print("No drives found.")
+            print("Documents drive not found.")
     else:
         print("Failed to retrieve all necessary components.")
 
