@@ -5,6 +5,10 @@ from msgraph import GraphServiceClient
 from msgraph.generated.models.o_data_errors.o_data_error import ODataError
 from dotenv import load_dotenv
 
+from msgraph.generated.models.drive_item import DriveItem
+from msgraph.generated.models.folder import Folder
+from msgraph.generated.models.file import File
+
 # Load sensitive information from environment variables
 load_dotenv()
 
@@ -75,9 +79,6 @@ async def get_drive_folders(client, drive_id):
         import traceback
         traceback.print_exc()
 
-from msgraph.generated.models.drive_item import DriveItem
-from msgraph.generated.models.folder import Folder
-from msgraph.generated.models.file import File
 
 async def create_folder_and_file(client, drive_id, folder_name, file_name, file_content):
     try:
