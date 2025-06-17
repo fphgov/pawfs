@@ -15,13 +15,16 @@ class SharepointConnector:
     A connector class for interacting with SharePoint using Microsoft Graph API via the requests library.
     """
 
-    def __init__(self, site_url, tenant_id, client_id):
-        self.site_url = site_url
+    def __init__(self, tenant_id, client_id, client_secret):
         self.tenant_id = tenant_id
         self.client_id = client_id
-        self.client_secret = os.getenv("AZURE_CLIENT_SECRET")
+        self.client_secret = client_secret
         if not self.client_secret:
             raise ValueError("AZURE_CLIENT_SECRET environment variable is missing.")
+        if not self.tenant_id:
+            raise ValueError("AZURE_TENANT_ID environment variable is missing.")
+        if not self.client_id:
+            raise ValueError("AZURE_CLIENT_ID environment variable is missing.")
         self.access_token = self._get_access_token()
 
     def _get_access_token(self):
@@ -32,6 +35,7 @@ class SharepointConnector:
             client_secret=self.client_secret
         )
         token = credential.get_token("https://graph.microsoft.com/.default")
+        print("Access token retrieved successfully.") # logging.info("Access token retrieved successfully.")
         return token.token
 
     def _make_request(self, method, endpoint, params=None, data=None, headers=None):
@@ -67,7 +71,7 @@ class SharepointConnector:
         """Retrieve the drives available in a SharePoint site."""
         return self._make_request("GET", f"/sites/{site_id}/drives")
 
-    def list_files(self, drive_id, folder_id="root"):
+    def list_folder_contents(self, drive_id, folder_id="root"):
         """List files in a specified folder within a drive."""
         return self._make_request("GET", f"/drives/{drive_id}/items/{folder_id}/children")
 

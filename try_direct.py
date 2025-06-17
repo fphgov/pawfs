@@ -7,9 +7,9 @@ dotenv.load_dotenv()
 
 
 conn = connector.SharepointConnector(
-    site_url="shit" , # Ensure this is set to the correct SharePoint site URL or ID
     tenant_id=os.getenv("AZURE_TENANT_ID"),
-    client_id=os.getenv("AZURE_CLIENT_ID")
+    client_id=os.getenv("AZURE_CLIENT_ID"),
+    client_secret=os.getenv("AZURE_CLIENT_SECRET"),
 )
 
 # # List all sites
@@ -29,14 +29,14 @@ if not drive_id:
 
 # List files in the root folder of a drive
 # drive_id = "your-drive-id"
-files = conn.list_files(drive_id).get("value", [])
+files = conn.list_folder_contents(drive_id).get("value", [])
 for file in files:
     print(f"File: {file.get('name')}, ID: {file.get('id')}, Size: {file.get('size')} bytes")
 
 print("\n\n\n", "how about passing in the root folder?")
 
 # List folders in the root folder of a drive
-folders = conn.list_files(drive_id, folder_id="root").get("value", [])
+folders = conn.list_folder_contents(drive_id, folder_id="root").get("value", [])
 for folder in folders:
     if folder.get("folder"):
         print(f"Folder: {folder.get('name')}, ID: {folder.get('id')}")
@@ -75,3 +75,25 @@ for item in list_items.get("value", []):
     for field_name, field_value in fields.items():
         print(f"  {field_name}: {field_value}")
 
+
+print("\n\n\n-----------------", "\n now we are getting a full folder.")
+
+# all i need is my site and drive id. which I can not list. hmm.
+# adatvagyon site:
+site_id = "budapestfph.sharepoint.com,a0764b45-f8ff-404e-befc-25afa14371eb,9100c1c7-b505-443c-8a76-4944a10f3fe0"
+drives = conn.get_drives(site_id)
+
+# drive_id = drives.get("value")[0].get("id") if drives else None  # "b!RUt2oP_4TkC-_CWvoUNx68fBAJEFtTxEinZJRKEPP-DYmkAGsYbDR70aG3nMatWL"
+for dr in drives.get("value", []):
+    print(f"Drive: {dr.get('name')}, ID: {dr.get('id')}")
+
+# ok, megvan a ddrive id, de még vannak lejjebb folderek.
+# List folders in the root folder of a drive
+
+# drill with the same pattern.
+contents = conn.list_folder_contents(drive_id, folder_id="root").get("value", [])
+for cont in contents:
+    if cont.get("folder"):
+        print(f"Folder: {cont.get('name')}, ID: {cont.get('id')}")
+    else:
+        print(f"Item: {cont.get('name')} is not a folder.")
