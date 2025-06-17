@@ -84,8 +84,8 @@ class SharepointConnector:
             response = self._make_request("PUT", endpoint, headers=headers, data=file)
         return response
 
-    def download_file(self, drive_id, file_id, destination_path):
-        """Download a file from a drive."""
+    def download_file_contents(self, drive_id, file_id, destination_path):
+        """Load the contents of a file from a drive: not saving to disc. Just get the bytes"""
         endpoint = f"/drives/{drive_id}/items/{file_id}/content"
         response = requests.get(
             f"https://graph.microsoft.com/v1.0{endpoint}",
@@ -93,8 +93,13 @@ class SharepointConnector:
         )
         if not response.ok:
             raise Exception(f"Download failed: {response.status_code} - {response.text}")
+        return response.content
+
+    def download_file(self, drive_id, file_id, destination_path):
+        """Download a file from a drive to a physical path."""
+        contents = self.download_file_contents(drive_id, file_id, destination_path)
         with open(destination_path, "wb") as file:
-            file.write(response.content)
+            file.write(contents)
         return destination_path
     
     def create_folder(self, drive_id, parent_folder_id, folder_name):
