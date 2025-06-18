@@ -20,9 +20,6 @@ for dr in drives.get("value", []):
 # ok, megvan a ddrive id, de még vannak lejjebb folderek.
 # List folders in the root folder of a drive
 
-for dr in drives.get("value", []):
-    print(f"Drive: {dr.get('name')}, ID: {dr.get('id')}")
-
 drive_id = drives.get("value")[0].get("id") if drives else None  # "b!RUt2oP_4TkC-_CWvoUNx68fBAJEFtTxEinZJRKEPP-DYmkAGsYbDR70aG3nMatWL"
 
 # drill with the same pattern.

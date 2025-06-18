@@ -84,6 +84,13 @@ class SharepointConnector:
             response = self._make_request("PUT", endpoint, headers=headers, data=file)
         return response
 
+    def save_file_contents(self, file_contents, drive_id, destination_path):
+        """Save the contents of a file to a specified path in a drive."""
+        endpoint = f"/drives/{drive_id}/root:/{destination_path}:/content"
+        headers = {"Content-Type": "application/octet-stream"}
+        response = self._make_request("PUT", endpoint, headers=headers, data=file_contents)
+        return response
+
     def download_file_contents(self, drive_id, file_id, destination_path):
         """Load the contents of a file from a drive: not saving to disc. Just get the bytes"""
         endpoint = f"/drives/{drive_id}/items/{file_id}/content"

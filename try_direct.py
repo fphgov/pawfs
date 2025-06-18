@@ -79,7 +79,7 @@ for item in list_items.get("value", []):
 print("\n\n\n-----------------", "\n now we are getting a full folder.")
 
 # all i need is my site and drive id. which I can not list. hmm.
-# adatvagyon site:
+# epuletenergetika site:
 site_id = "budapestfph.sharepoint.com,a0764b45-f8ff-404e-befc-25afa14371eb,9100c1c7-b505-443c-8a76-4944a10f3fe0"
 drives = conn.get_drives(site_id)
 
