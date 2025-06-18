@@ -91,7 +91,7 @@ class SharepointConnector:
         response = self._make_request("PUT", endpoint, headers=headers, data=file_contents)
         return response
 
-    def download_file_contents(self, drive_id, file_id, destination_path):
+    def download_file_contents(self, drive_id, file_id):
         """Load the contents of a file from a drive: not saving to disc. Just get the bytes"""
         endpoint = f"/drives/{drive_id}/items/{file_id}/content"
         response = requests.get(
