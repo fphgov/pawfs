@@ -75,21 +75,36 @@ class SharepointConnector:
         """List files in a specified folder within a drive."""
         return self._make_request("GET", f"/drives/{drive_id}/items/{folder_id}/children")
 
-    def upload_file(self, drive_id, folder_id, file_path):
-        """Upload a file to a specified folder in a drive."""
-        with open(file_path, "rb") as file:
-            file_name = os.path.basename(file_path)
-            endpoint = f"/drives/{drive_id}/items/{folder_id}:/{file_name}:/content"
+    def upload_file(self, drive_id, input_file_path, destination_folder_path):
+        """Upload a file to a specified folder path in a drive."""
+        with open(input_file_path, "rb") as file:
+            file_name = os.path.basename(input_file_path)
+            endpoint = f"/drives/{drive_id}/root:/{destination_folder_path}/{file_name}:/content"
             headers = {"Content-Type": "application/octet-stream"}
-            response = self._make_request("PUT", endpoint, headers=headers, data=file)
+            # remove _make_request it will force json! data= is the right way to send binary data
+            response = requests.put(
+                f"https://graph.microsoft.com/v1.0{endpoint}",
+                headers=headers,
+                data=file
+            )
         return response
 
     def save_file_contents(self, file_contents, drive_id, destination_path):
-        """Save the contents of a file to a specified path in a drive."""
+        """Upload file contents (text or binary) to a specific path in a SharePoint drive."""
         endpoint = f"/drives/{drive_id}/root:/{destination_path}:/content"
-        headers = {"Content-Type": "application/octet-stream"}
-        response = self._make_request("PUT", endpoint, headers=headers, data=file_contents)
-        return response
+        headers = {
+            "Authorization": f"Bearer {self.access_token}",
+            "Content-Type": "application/octet-stream"
+        }
+        # Use data= for binary, not json= !!
+        response = requests.put(
+            f"https://graph.microsoft.com/v1.0{endpoint}",
+            headers=headers,
+            data=file_contents
+        )
+        if not response.ok:
+            raise Exception(f"Request failed: {response.status_code} - {response.text}")
+        return response.json()
 
     def download_file_contents(self, drive_id, file_id):
         """Load the contents of a file from a drive: not saving to disc. Just get the bytes"""

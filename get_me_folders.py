@@ -11,7 +11,7 @@ conn = connector.SharepointConnector(
 
 # all i need is my site and drive id. which I can not list. hmm.
 # adatvagyon site:
-site_id = "budapestfph.sharepoint.com,a0764b45-f8ff-404e-befc-25afa14371eb,9100c1c7-b505-443c-8a76-4944a10f3fe0"
+site_id = os.getenv("SHAREPOINT_SITE_ID")  # Replace with your actual site ID
 drives = conn.get_drives(site_id)
 
 for dr in drives.get("value", []):
@@ -20,7 +20,7 @@ for dr in drives.get("value", []):
 # ok, megvan a ddrive id, de még vannak lejjebb folderek.
 # List folders in the root folder of a drive
 
-drive_id = drives.get("value")[0].get("id") if drives else None  # "b!RUt2oP_4TkC-_CWvoUNx68fBAJEFtTxEinZJRKEPP-DYmkAGsYbDR70aG3nMatWL"
+drive_id = drives.get("value")[0].get("id") if drives else None
 
 # drill with the same pattern.
 contents = conn.list_folder_contents(drive_id, folder_id="root").get("value", [])
