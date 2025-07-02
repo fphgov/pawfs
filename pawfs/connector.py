@@ -76,15 +76,15 @@ class SharepointConnector:
         return self._make_request("GET", f"/drives/{drive_id}/items/{folder_id}/children")
 
     def list_folder_contents_by_path(self, drive_id, folder_path="/"):
-    """List files in a specified folder within a drive, using the folder's path."""
-    # Ensure folder_path does not start with a slash (API might require this)
-    normalized_path = folder_path.lstrip("/")
-    # If root, use special case
-    if not normalized_path:
-        endpoint = f"/drives/{drive_id}/root/children"
-    else:
-        endpoint = f"/drives/{drive_id}/root:/{normalized_path}:/children"
-    return self._make_request("GET", endpoint)
+        """List files in a specified folder within a drive, using the folder's path."""
+        # Ensure folder_path does not start with a slash (API might require this)
+        normalized_path = folder_path.lstrip("/")
+        # If root, use special case
+        if not normalized_path:
+            endpoint = f"/drives/{drive_id}/root/children"
+        else:
+            endpoint = f"/drives/{drive_id}/root:/{normalized_path}:/children"
+        return self._make_request("GET", endpoint)
 
     def upload_file(self, drive_id, input_file_path, destination_folder_path):
         """Upload a file to a specified folder path in a drive."""
