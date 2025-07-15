@@ -12,6 +12,7 @@ azure-identity = "1.15.0"
 python-dotenv = "1.0.0"
 azure-core = "1.29.5"
 certifi = "2023.7.22"
+cffi = "1.16.0"
 
 
 [tool.poetry.group.dev.dependencies]
