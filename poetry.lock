@@ -22,21 +22,20 @@ tracing = ["opentelemetry-api (>=1.26,<2.0)"]
 
 [[package]]
 name = "azure-identity"
-version = "1.23.0"
+version = "1.15.0"
 description = "Microsoft Azure Identity Library for Python"
 optional = false
-python-versions = ">=3.9"
+python-versions = ">=3.7"
 files = [
-    {file = "azure_identity-1.23.0-py3-none-any.whl", hash = "sha256:dbbeb64b8e5eaa81c44c565f264b519ff2de7ff0e02271c49f3cb492762a50b0"},
-    {file = "azure_identity-1.23.0.tar.gz", hash = "sha256:d9cdcad39adb49d4bb2953a217f62aec1f65bbb3c63c9076da2be2a47e53dde4"},
+    {file = "azure-identity-1.15.0.tar.gz", hash = "sha256:4c28fc246b7f9265610eb5261d65931183d019a23d4b0e99357facb2e6c227c8"},
+    {file = "azure_identity-1.15.0-py3-none-any.whl", hash = "sha256:a14b1f01c7036f11f148f22cd8c16e05035293d714458d6b44ddf534d93eb912"},
 ]
 
 [package.dependencies]
-azure-core = ">=1.31.0"
+azure-core = ">=1.23.0,<2.0.0"
 cryptography = ">=2.5"
-msal = ">=1.30.0"
-msal-extensions = ">=1.2.0"
-typing-extensions = ">=4.0.0"
+msal = ">=1.24.0,<2.0.0"
+msal-extensions = ">=0.3.0,<2.0.0"
 
 [[package]]
 name = "certifi"
@@ -666,4 +665,4 @@ zstd = ["zstandard (>=0.18.0)"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.11"
-content-hash = "097ceb5d9fe65aede7fc84764fcc77f9576c37c4d63055e025454ee777f12595"
+content-hash = "790f509a5f4927a4df3816c701457ecb9acae70a871a119f879b395253632e7b"
