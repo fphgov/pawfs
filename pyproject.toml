@@ -10,6 +10,7 @@ python = ">=3.10,<3.11"
 dotenv = "^0.9.9"
 azure-identity = "1.15.0"
 python-dotenv = "1.0.0"
+azure-core = "1.29.5"
 
 
 [tool.poetry.group.dev.dependencies]
