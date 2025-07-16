@@ -8,7 +8,7 @@ readme = "README.md"
 [tool.poetry.dependencies]
 python = ">=3.10,<3.11"
 dotenv = "^0.9.9"
-azure-identity = "1.15.0"
+azure-identity = "1.16.1"
 python-dotenv = "1.0.0"
 azure-core = "1.29.5"
 certifi = "2023.7.22"
