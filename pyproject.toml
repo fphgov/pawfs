@@ -24,6 +24,7 @@ six = "1.16.0"
 requests = "2.31.0"
 pycparser = "2.21"
 portalocker = "2.8.2"
+typing-extensions = "4.8.0"
 
 
 [tool.poetry.group.dev.dependencies]
