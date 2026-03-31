@@ -8,10 +8,6 @@ authors = [
   { name = "partvishegy", email = "venczeli.jozsef@budapest.hu" }
 ]
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> c8a2f99 (move from poetry to uv)
 dependencies = [
   "azure-identity>=1.15.0,<2.0.0",
   "azure-core>=1.29.5,<2.0.0",
@@ -24,36 +20,6 @@ dependencies = [
   "pandas>=2.3.0,<3.0.0",
   "openpyxl>=3.1.5,<4.0.0",
 ]
-<<<<<<< HEAD
-=======
-[tool.poetry.dependencies]
-python = ">=3.10,<=3.14"
-dotenv = "^0.9.9"
-azure-identity = "^1.15.0"
-python-dotenv = "^1.0.0"
-azure-core = "^1.29.5"
-certifi = "^2023.7.22"
-cffi = "^1.16.0"
-charset-normalizer = "^3.3.2"
-cryptography = "^41.0.5"
-idna = "^3.4"
-msal-extensions = "^1.0.0"
-msal = "^1.24.1"
-pyjwt = "^2.8.0"
-urllib3 = "^1.26.18"
-six = "^1.16.0"
-requests = "^2.31.0"
-pycparser = "^2.21"
-portalocker = "^2.8.2"
-typing-extensions = "^4.8.0"
-
-
-[tool.poetry.group.dev.dependencies]
-pandas = "^2.3.0"
-openpyxl = "^3.1.5"
->>>>>>> 3eea266 (Bump azure-core from 1.29.5 to 1.38.0)
-=======
->>>>>>> c8a2f99 (move from poetry to uv)
 
 [build-system]
 requires = ["hatchling"]
