@@ -1,36 +1,26 @@
-[tool.poetry]
+[project]
 name = "pawfs"
 version = "0.1.0"
 description = "Utility for accessing files on sharepoint / other places from our pipelines."
-authors = ["partvishegy <venczeli.jozsef@budapest.hu>"]
 readme = "README.md"
+requires-python = ">=3.10,<=3.14"
+authors = [
+  { name = "partvishegy", email = "venczeli.jozsef@budapest.hu" }
+]
 
-[tool.poetry.dependencies]
-python = ">=3.10,<3.11"
-dotenv = "^0.9.9"
-azure-identity = "1.15.0"
-python-dotenv = "1.0.0"
-azure-core = "1.38.0"
-certifi = "2023.7.22"
-cffi = "1.16.0"
-charset-normalizer = "3.3.2"
-cryptography = "41.0.5"
-idna = "3.4"
-msal-extensions = "1.0.0"
-msal = "1.24.1"
-pyjwt = "2.8.0"
-urllib3 = "1.26.18"
-six = "1.16.0"
-requests = "2.31.0"
-pycparser = "2.21"
-portalocker = "2.8.2"
-typing-extensions = "4.8.0"
-
-
-[tool.poetry.group.dev.dependencies]
-pandas = "^2.3.0"
-openpyxl = "^3.1.5"
+dependencies = [
+  "azure-identity>=1.15.0,<2.0.0",
+  "azure-core>=1.29.5,<2.0.0",
+  "python-dotenv>=1.0.0,<2.0.0",
+  "msal>=1.24.1,<2.0.0",
+  "msal-extensions>=1.0.0,<2.0.0",
+  "pyjwt>=2.8.0,<3.0.0",
+  "requests>=2.31.0,<3.0.0",
+  "portalocker>=2.8.2,<3.0.0",
+  "pandas>=2.3.0,<3.0.0",
+  "openpyxl>=3.1.5,<4.0.0",
+]
 
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
