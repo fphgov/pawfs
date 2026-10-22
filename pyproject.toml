@@ -3,7 +3,8 @@ name = "pawfs"
 version = "0.1.0"
 description = "Utility for accessing files on sharepoint / other places from our pipelines."
 readme = "README.md"
-requires-python = ">=3.10,<=3.14"
+# No upper bound: "<=3.14" means 3.14.0 only (PEP 440) and broke pip installs on 3.14.x.
+requires-python = ">=3.10"
 authors = [
   { name = "partvishegy", email = "venczeli.jozsef@budapest.hu" }
 ]
