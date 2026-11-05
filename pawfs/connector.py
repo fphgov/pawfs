@@ -66,6 +66,10 @@ class SharepointConnector:
     def get_site_by_id(self, site_id):
         """Retrieve a SharePoint site by its ID."""
         return self._make_request("GET", f"/sites/{site_id}")
+    
+    def get_site_by_web_rel_url(self, hostname, url_name):
+        """Retrieve site-id and web-id by web relative url"""
+        return self._make_request("GET", f"/sites/{hostname}:/sites/{url_name}")
 
     def get_drives(self, site_id):
         """Retrieve the drives available in a SharePoint site."""

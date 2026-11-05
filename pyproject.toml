@@ -19,6 +19,7 @@ dependencies = [
   "portalocker>=2.8.2,<3.0.0",
   "pandas>=2.3.0,<3.0.0",
   "openpyxl>=3.1.5,<4.0.0",
+  "python-json-logger>=4.2.0",
 ]
 
 [build-system]
