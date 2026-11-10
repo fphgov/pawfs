@@ -1,10 +1,24 @@
 from azure.identity import ClientSecretCredential
 import os
 import requests
-from .log import logger
-from .error import GraphError
+from pawfs.log import logger
+from pawfs.error import GraphError
 
 class GraphClient:
+    """Client for authenticating and sending requests to Microsoft Graph API.
+
+    This client uses the OAuth 2.0 client credentials flow to obtain
+    an access token and provides helper methods for interacting with
+    Microsoft Graph resources such as SharePoint sites, document
+    libraries, folders, and files.
+
+    Attributes:
+        tenant_id (str): Microsoft Entra tenant identifier.
+        client_id (str): Azure application (client) identifier.
+        client_secret (str): Azure application client secret.
+        access_token (str): OAuth access token used for Graph API
+            requests.
+    """
     DEFAULT_GRAPH_URL = "https://graph.microsoft.com/.default"
     REQUEST_BASE_URL = "https://graph.microsoft.com/v1.0"
 
@@ -32,10 +46,15 @@ class GraphClient:
         return token.token
     
     def _raise_graph_error(self, response: requests.Response) -> GraphError:
-        """	3. ValueError: a response.json() dobja, ha a vlasz törzse nem JSON. Ilyen pl: egy proxy vagy gateway HTML hibaoldala vagy egy üres törzs. A requests saját JSONDecodeError-a a ValueError leszármazottja, ezért ezzel elkapjuk.
-	4. KeyError: a JSON rendben van, de nincs benne "error" kulcs.
-Status_code: a HTTP státusz kód, ez mindig van, response.status_code"""
-        """HTTP status code, Graph code from response json"""
+        """
+        ValueError: Raised by response.json() when the response body is not valid JSON.
+        Typical examples include an HTML error page returned by a proxy or gateway, or an empty response body.
+        Requests' own JSONDecodeError inherits from ValueError, so it is also caught by this exception handler.
+            
+        KeyError: The JSON is valid, but it does not contain the "error" key.
+        
+        Status_code: The HTTP status code. This is always available via response.status_code.
+        """
         try:
             error_msg = response.json()["error"]
             raise GraphError(
@@ -51,8 +70,33 @@ Status_code: a HTTP státusz kód, ez mindig van, response.status_code"""
                 message=response.text
             )
 
-    def make_request(self, method, endpoint, params=None, data=None, headers=None):
-        """Helper method to send HTTP requests to the Graph API."""
+    def make_request(self, method, endpoint, json=None, params=None, data=None, headers=None) -> requests.Response:
+        """Send an HTTP request to the Microsoft Graph API.
+
+        Builds the request URL, applies authentication headers,
+        sends the request, and validates the response. If the
+        request fails, a Graph API specific exception is raised.
+
+        Args:
+            method (str): HTTP method to use (e.g. "GET", "POST",
+                "PATCH", "PUT", "DELETE").
+            endpoint (str): Graph API endpoint relative to the base URL.
+            json (dict | None): JSON payload to send in the request body. Defaults to None.
+            params (dict | None): Query string parameters. Defaults to None.
+            data (Any | None): Raw request body. Defaults to None.
+            headers (dict | None): Additional HTTP headers that override or 
+                extend the default headers.
+                Defaults to None.
+
+        Returns:
+            requests.Response: The HTTP response returned by the
+            Graph API.
+
+        Raises:
+            GraphApiError: If the Graph API returns a non-success
+                status code.
+        """
+
         url = f"{self.REQUEST_BASE_URL}{endpoint}"
         default_headers = {
             "Authorization": f"Bearer {self.access_token}",
@@ -66,7 +110,8 @@ Status_code: a HTTP státusz kód, ez mindig van, response.status_code"""
             method=method,
             url=url,
             params=params,
-            json=data,
+            json=json,
+            data=data,
             headers=default_headers
         )
         #logger.info("response: %s", response.json())
@@ -75,6 +120,5 @@ Status_code: a HTTP státusz kód, ez mindig van, response.status_code"""
             logger.error(response)
             self._raise_graph_error(response=response)
         
-           
         return response
         

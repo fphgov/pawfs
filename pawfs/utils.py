@@ -1,7 +1,9 @@
 import dotenv
 import os
 from pathlib import Path
-from .log import logger
+from pawfs.log import logger
+import re
+from datetime import datetime
 
 dotenv.load_dotenv()
 
@@ -39,3 +41,17 @@ def get_secret(secret_name: str, secret_folder: str = "SECRET_FOLDER") -> str:
     if value:
         return value
     raise ValueError(f"Secret for {secret_name} is empty.")
+
+def get_latest_dated_filename(filenames: list[str]) -> str | None:
+    """Return the filename with the latest date from a list of files.
+    Date should be YYYY-MM-DD format in the filename.
+    Underscore or hyphen can be used as a separator."""
+    date_pattern = re.compile(r"(\d{4}[-_]\d{2}[-_]\d{2})")
+    dated_files = [
+        (fname, datetime.strptime(date_match.group(1).replace("_", "-"), "%Y-%m-%d"))
+        for fname in filenames
+        if (date_match := date_pattern.search(fname))
+    ]
+    if not dated_files:
+        return None
+    return max(dated_files, key=lambda x: x[1])[0]

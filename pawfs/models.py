@@ -10,14 +10,21 @@ class DriveInfo:
     drive_type: str
 
 @dataclass
+class Folder:
+    name: str
+    id: str
+
+@dataclass
 class File:
     name: str
     id: str
 
 @dataclass
-class Folder:
-    name: str
-    id: str
+class ParentItem:
+    item_id: str
+    item_name: str
+    item_type: str
+    parent: Folder | None
 
 @dataclass
 class FolderContents:

@@ -1,4 +1,4 @@
-from .log import logger
+from pawfs.log import logger
 
 class GraphError(Exception):
     def __init__(self, status: int, code: str, message: str):
