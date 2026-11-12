@@ -1,11 +1,15 @@
+"""utils functions definition"""
+
 import dotenv
 import os
 from pathlib import Path
 from pawfs.log import logger
 import re
 from datetime import datetime
+from collections.abc import Iterable
 
 dotenv.load_dotenv()
+
 
 def get_secret(secret_name: str, secret_folder: str = "SECRET_FOLDER") -> str:
     """
@@ -25,7 +29,7 @@ def get_secret(secret_name: str, secret_folder: str = "SECRET_FOLDER") -> str:
     # if secret_folder is an env var, get it.
     # otherwise treat it as a literal string
     secret_folder = os.getenv(secret_folder)
-    logger.info('secret_folder: %s', secret_folder)
+    logger.info("secret_folder: %s", secret_folder)
     file_path = Path(secret_folder) / file_key
     logger.info("Looking for secret file for %s: %s", secret_name, file_path)
     if file_path.exists() and file_path.is_file():
@@ -42,7 +46,8 @@ def get_secret(secret_name: str, secret_folder: str = "SECRET_FOLDER") -> str:
         return value
     raise ValueError(f"Secret for {secret_name} is empty.")
 
-def get_latest_dated_filename(filenames: list[str]) -> str | None:
+
+def get_latest_dated_filename(filenames: Iterable[str]) -> str | None:
     """Return the filename with the latest date from a list of files.
     Date should be YYYY-MM-DD format in the filename.
     Underscore or hyphen can be used as a separator."""

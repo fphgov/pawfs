@@ -1,17 +1,22 @@
-from datetime import datetime
-import json
-import os
-from pawfs import logger, GraphClient, SharePointService, SharePointFolder, SharePointFile, get_secret, get_latest_dated_filename
-import pandas as pd
+"""Main file for testing methods"""
 
-from zoneinfo import ZoneInfo
+from datetime import datetime
+from pawfs import (
+    logger,
+    GraphClient,
+    SharePointService,
+    SharePointFolder,
+    SharePointFile,
+    get_secret,
+)
+
 
 now = datetime.now()
 current_datetime = now.strftime("%Y-%m-%d %H:%M:%S")
 
 conn = GraphClient(
     tenant_id=get_secret(
-        secret_name="AZURE_TENANT_ID", 
+        secret_name="AZURE_TENANT_ID",
     ),
     client_id=get_secret(
         secret_name="AZURE_CLIENT_ID",
@@ -22,8 +27,7 @@ conn = GraphClient(
 )
 
 siteinfo = SharePointService(conn).get_site_by_web_rel_url(
-    hostname="budapestfph.sharepoint.com",
-    url_name="ai"
+    hostname="budapestfph.sharepoint.com", url_name="ai"
 )
 
 site_id = siteinfo.id
@@ -33,18 +37,18 @@ drives = SharePointService(conn).get_drives(site_id=site_id)
 logger.info(drives)
 
 drive_id = SharePointService(conn).get_drive_id_by_weburl(
-    drives=drives, 
-    web_url="https://budapestfph.sharepoint.com/sites/ai/Shared%20Documents")
+    drives=drives,
+    web_url="https://budapestfph.sharepoint.com/sites/ai/Shared%20Documents",
+)
 
 logger.info(drive_id)
 
 ######################################################
-"""folder_contents = SharePointFolder(
-    graph_connection=conn,
-    drive_id=drive_id
-    ).list_sharepoint_folder_contents(folder_path="DEV_Data_pipeline_interim")
+folder_contents = SharePointFolder(
+    graph_connection=conn, drive_id=drive_id
+).list_sharepoint_folder_contents(folder_path="DEV_Data_pipeline_interim")
 
-logger.info(folder_contents)"""
+logger.info(folder_contents)
 
 
 ######################################################
@@ -76,7 +80,7 @@ logger.info(file_content)"""
     json.dump(parent_folder.json(), f, ensure_ascii=False, indent=2)
 """
 ######################################################
-#download and load to memory
+# download and load to memory
 """SharePointFile(
     graph_connection=conn,
     drive_id=drive_id
@@ -143,26 +147,21 @@ response = SharePointFile(
 
 logger.info(response)"""
 ######################################################
-"""#get_latest_dated_filename
+# get_latest_dated_filename
 folder_contents = SharePointFolder(
-    graph_connection=conn,
-    drive_id=drive_id
-).list_sharepoint_folder_contents(
-    folder_id="01CLWSBQKL4W72XNIEWFGJLYRGIQJBAJXK"
-)
+    graph_connection=conn, drive_id=drive_id
+).list_sharepoint_folder_contents(folder_id="01CLWSBQKL4W72XNIEWFGJLYRGIQJBAJXK")
 
-logger.info(folder_contents)
+# logger.info(folder_contents)
 
 latest_file = SharePointFile(
-    graph_connection=conn,
-    drive_id=drive_id
+    graph_connection=conn, drive_id=drive_id
 ).get_latest_file_from_sharepoint(
-    files=folder_contents.files,
-    file_pattern="KGR_intézményi_tény_"
+    files=folder_contents.files, file_pattern="KGR_intézményi_tény_"
 )
 
-logger.info(latest_file)"""
-######################################################     
+logger.info(latest_file)
+######################################################
 # recursive download
 """
 SharePointFolder(
@@ -173,10 +172,10 @@ SharePointFolder(
     local_base_path="/home/orban.nagy.z/projects/pawfs/data"
 )"""
 
-###################################################### 
+######################################################
 # export to multiplesheet excel
 
-data_first = {
+"""data_first = {
     "nev": ["Anna", "Bela", "Csilla", "David"],
     "kor": [25, 30, 28, 35],
     "varos": ["Budapest", "Debrecen", "Szeged", "Gyor"]
@@ -204,4 +203,4 @@ SharePointFile(
     index=True,
     timestamp_format="%Y-%m-%d %H:%M:%S",
     tz=ZoneInfo("Europe/Budapest")
-)
+)"""
