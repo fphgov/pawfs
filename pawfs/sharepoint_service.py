@@ -1,0 +1,873 @@
+"""SharePointService, SharePointFile, SharePointFolder, SharePointList class"""
+
+from pawfs.graph_client import GraphClient
+from pawfs.models import SiteInfo, FolderContents, DriveInfo, File, Folder, ParentItem
+from pawfs.utils import get_latest_dated_filename
+from typing import Any
+from pawfs.log import logger
+from io import BytesIO
+import pandas as pd
+import os
+import re
+from datetime import datetime, timezone, tzinfo
+import requests
+
+
+class SharePointService:
+    """Service for managing SharePoint resources through Microsoft Graph.
+
+    Provides high-level operations for working with SharePoint sites,
+    document libraries, folders, and files using a GraphClient
+    instance.
+
+    Attributes:
+        graph_connection (GraphClient): Authenticated Microsoft Graph
+            API client used to perform requests.
+    """
+
+    def __init__(self, graph_connection: GraphClient):
+        """Initialize the service with a Microsoft Graph client.
+
+        Args:
+            graph_connection (GraphClient): The client used to communicate with
+                the Microsoft Graph API.
+        """
+        self.graph_connection = graph_connection
+
+    def get_site_by_web_rel_url(self, hostname: str, url_name: str) -> SiteInfo:
+        """Retrieve site-id and web-id by web relative url"""
+        response = self.graph_connection.make_request(
+            method="GET", endpoint=f"/sites/{hostname}:/sites/{url_name}"
+        ).json()
+
+        logger.info(response)
+
+        return SiteInfo(
+            description=response.get("description"),
+            id=response.get("id", ""),
+            name=response.get("name", ""),
+            web_url=response.get("webUrl", ""),
+            display_name=response.get("displayName", ""),
+            site_collection=response.get("siteCollection", "").get("hostname", ""),
+        )
+
+    def get_drive(self, site_id: str) -> DriveInfo:
+        """Retrieve the default document library (drive) for a SharePoint site.
+
+        Calls the Microsoft Graph API `/sites/{site_id}/drive` endpoint
+        and returns the site's default document library, typically
+        "Documents" (Shared Documents).
+
+        Args:
+            site_id (str): Unique identifier of the SharePoint site.
+
+        Returns:
+            DriveInfo: Metadata of the SharePoint document library,
+                including its ID, name, description, type, and URL.
+        """
+        response = self.graph_connection.make_request(
+            method="GET", endpoint=f"/sites/{site_id}/drive"
+        ).json()
+
+        return DriveInfo(
+            description=response.get("description", ""),
+            id=response.get("id", ""),
+            name=response.get("name", ""),
+            web_url=response.get("webUrl", ""),
+            drive_type=response.get("driveType", ""),
+        )
+
+    def get_drives(self, site_id: str) -> list[DriveInfo]:
+        """Retrieve all document libraries (drives) for a SharePoint site.
+
+        Calls the Microsoft Graph API `/sites/{site_id}/drives`
+        endpoint and returns all document libraries available
+        on the specified site.
+
+        Args:
+            site_id (str): Unique identifier of the SharePoint site.
+
+        Returns:
+            list[DriveInfo]: Information about all drives associated
+                with the site.
+
+        Raises:
+            GraphApiError: If the Graph API request fails.
+        """
+        response = self.graph_connection.make_request(
+            method="GET", endpoint=f"/sites/{site_id}/drives"
+        ).json()
+
+        drives = []
+
+        for drive in response.get("value"):
+            drives.append(
+                DriveInfo(
+                    description=drive.get("description", ""),
+                    id=drive.get("id", ""),
+                    name=drive.get("name", ""),
+                    web_url=drive.get("webUrl", ""),
+                    drive_type=drive.get("driveType", ""),
+                )
+            )
+
+        return drives
+
+    def get_drive_id_by_weburl(
+        self, drives: DriveInfo | list[DriveInfo], web_url: str
+    ) -> str | None:
+        """Return the drive ID matching the specified web URL.
+
+        Args:
+            drives (DriveInfo | list[DriveInfo]): One or more drives to search.
+            web_url (str): Drive web URL to match.
+
+        Returns:
+            str | None: The matching drive ID, or None if no matching
+                drive is found.
+        """
+
+        if isinstance(drives, list):
+            for drive in drives:
+                return drive.id if drive.web_url == web_url else None
+        if isinstance(drives, DriveInfo):
+            return drives.id if drives.web_url == web_url else None
+
+
+class SharePointFile:
+    """Provides file operations for a specific SharePoint drive.
+
+    This service encapsulates file-related operations such as
+    uploading, downloading, searching, and managing files
+    within a SharePoint document library.
+
+    Attributes:
+        graph_connection (GraphClient): Authenticated Microsoft
+            Graph API client used to execute requests.
+        drive_id (str): Identifier of the SharePoint drive
+            (document library) on which file operations are performed.
+
+    Class Attributes:
+        SEARCH_PAGE_SIZE (int): Number of search results to
+            retrieve per page when querying the Graph Search API.
+    """
+
+    SEARCH_PAGE_SIZE = 50
+
+    def __init__(self, graph_connection: GraphClient, drive_id: str):
+        """Initialize the service with a Microsoft Graph client and drive ID.
+
+        Args:
+            graph_connection (GraphClient): The client used to communicate with
+                the Microsoft Graph API.
+            drive_id (str): The unique identifier of the drive to operate on.
+        """
+        self.graph_connection = graph_connection
+        self.drive_id = drive_id
+
+    # TODO kiprobalni
+    def copy_file(self, file_id: str, destination_folder_id: str) -> dict:
+        """Copy a file to another folder within the same drive.
+
+        Args:
+            file_id (str): The unique identifier of the file to copy.
+            destination_folder_id (str): The unique identifier of the destination
+                folder.
+
+        Returns:
+            dict: The JSON response returned by the Graph API for the copy operation.
+        """
+        data = {
+            "parentReference": {"id": destination_folder_id},
+            "name": None,  # Keep the same name
+        }
+        endpoint = f"/drives/{self.drive_id}/items/{file_id}/copy"
+        return self.graph_connection.make_request(
+            method="POST", endpoint=endpoint, data=data
+        ).json()
+
+    def download_file_to_memory(self, file_id: str) -> Any:
+        """Download the contents of a file from the drive without saving it to disk.
+
+        Args:
+            file_id (str): The unique identifier of the file to download.
+
+        Returns:
+            Any: The raw content of the downloaded file.
+        """
+        endpoint = f"/drives/{self.drive_id}/items/{file_id}/content"
+        return self.graph_connection.make_request(
+            method="GET", endpoint=endpoint
+        ).content
+
+    def download_file_to_local(self, file_id: str, destination_path: str) -> str:
+        """Download a file from a drive to a physical path."""
+        contents = self.download_file_to_memory(file_id)
+        with open(destination_path, "wb") as file:
+            file.write(contents)
+        return destination_path
+
+    def move_file(self, file_id: str, destination_folder_id: str) -> dict:
+        """Move a file to a different folder within the same drive."""
+        data = {"parentReference": {"id": destination_folder_id}}
+        endpoint = f"/drives/{self.drive_id}/items/{file_id}"
+        return self.graph_connection.make_request(
+            method="PATCH", endpoint=endpoint, json=data
+        ).json()
+
+    def read_table_from_sharepoint(self, file_id: str, file_type: str, **kwargs) -> Any:
+        """Reads a file from SharePoint and returns it as a DataFrame or a dictionary of DataFrames.
+        Supports .xlsx and .csv
+
+        Args:
+            sp_conn (connector.SharepointConnector): The SharePoint connection instance.
+            drive_id (str): The ID of the SharePoint drive.
+            file_id (str): The ID of the file to read.
+            file_type (str): The type of the file to read ("xlsx" or "csv"). Defaults to "xlsx".
+            **kwargs: Additional keyword arguments passed to pd.read_excel or pd.read_csv.
+        Returns:
+            pd.DataFrame or dict: If file_type is "xlsx", returns a dictionary of DataFrames (sheets).
+                                If file_type is "csv", returns a single DataFrame.
+        """
+        file_contents = self.download_file_to_memory(file_id=file_id)
+
+        with BytesIO(file_contents) as buffer:
+            if file_type == "xlsx":
+                sheets = pd.read_excel(
+                    buffer,
+                    # use kwargs with defaults
+                    sheet_name=kwargs.pop("sheet_name", None),
+                    header=kwargs.pop("header", None),
+                    decimal=kwargs.pop("decimal", ","),
+                    engine=kwargs.pop("engine", "openpyxl"),
+                    **kwargs,
+                )
+                logger.info(f"Read {len(sheets)} sheets from file ID: {file_id}")
+                return sheets
+            if file_type == "csv":
+                df = pd.read_csv(
+                    buffer,
+                    # use kwargs with defaults
+                    sep=kwargs.pop("sep", ";"),
+                    decimal=kwargs.pop("decimal", ","),
+                    encoding=kwargs.pop("encoding", "utf-8-sig"),
+                    **kwargs,
+                )
+                logger.info(f"Read CSV file ID: {file_id}")
+                return df
+            raise ValueError("Unsupported file type. Use 'xlsx' or 'csv'.")
+
+    def upload_file_content(
+        self,
+        file_contents,
+        parent_folder_id: str | None,
+        file_name: str | None = None,
+        file_id: str | None = None,
+    ) -> requests.Response:
+        """If file_id is added than the exist file will be replaced.
+        If file_name is added than new file will be uploaded.
+        """
+        if file_id:
+            endpoint = f"/drives/{self.drive_id}/items/{file_id}/content"
+
+        if file_name:
+            endpoint = f"/drives/{self.drive_id}/items/{parent_folder_id}:/{file_name}:/content"
+
+        headers = {"Content-Type": "text/plain"}
+
+        return self.graph_connection.make_request(
+            method="PUT", endpoint=endpoint, data=file_contents, headers=headers
+        )
+
+    def upload_file(
+        self,
+        input_file_path: str,
+        parent_folder_id: str | None,
+        file_id: str | None = None,
+        file_name: str | None = None,
+    ) -> requests.Response:
+        """Upload a local file to the current SharePoint drive.
+
+        Uploads the file located at the specified local path. If a file ID is
+        provided, the existing file is replaced. Otherwise, a new file is uploaded
+        to the specified parent folder.
+
+        Args:
+            input_file_path (str): Path to the local file to upload.
+            file_id (str | None): ID of the existing file to replace. If None,
+                a new file is uploaded.
+            parent_folder_id (str | None): ID of the destination folder for a new
+                file.
+            file_name (str | None): Name to use for the uploaded file.
+
+        Returns:
+            requests.Response: The HTTP response returned by the Graph API.
+        """
+        if file_name:
+            with open(input_file_path, "rb") as file:
+                response = self.upload_file_content(
+                    file_contents=file,
+                    parent_folder_id=parent_folder_id,
+                    file_name=file_name,
+                )
+            logger.info(response)
+            return response
+
+        if file_id:
+            with open(input_file_path, "rb") as file:
+                file_name = os.path.basename(input_file_path)
+                response = self.upload_file_content(
+                    file_contents=file,
+                    parent_folder_id=parent_folder_id,
+                    file_id=file_id,
+                )
+            logger.info(response)
+            return response
+
+    def save_file_contents(self, file_contents: bytes, destination_path: str) -> dict:
+        """Upload file contents (text or binary) to a specific path in a SharePoint drive."""
+        endpoint = f"/drives/{self.drive_id}/root:/{destination_path}:/content"
+        headers = {"Content-Type": "application/octet-stream"}
+
+        # Use data= for binary, not json= !!
+        response = self.graph_connection.make_request(
+            method="PUT", endpoint=endpoint, headers=headers, data=file_contents
+        )
+        return response.json()
+
+    def save_df_to_sharepoint(
+        self,
+        df: pd.DataFrame,
+        file_name: str,
+        sharepoint_folder_path: str,
+        index=True,
+    ) -> None:
+        """Saves a DataFrame to SharePoint as a .csv or .xlsx file.
+
+        Args:
+            sp_conn (connector.SharepointConnector): The SharePoint connection instance.
+            df (pd.DataFrame): The DataFrame to save.
+            file_name (str): The name of the file to create.
+            folder_path (str): The path to the folder in SharePoint.
+            index (bool): Whether to include the DataFrame index in the saved file. Defaults to True.
+        """
+        with BytesIO() as buffer:
+            if file_name.endswith(".xlsx"):
+                # this is untested. probably needs pd.ExcelWriter() context manager.
+                df.to_excel(buffer, index=index, engine="openpyxl")
+            elif file_name.endswith(".csv"):
+                df.to_csv(
+                    buffer, sep=";", decimal=",", index=index, encoding="utf-8-sig"
+                )
+            else:
+                raise ValueError(
+                    "Unsupported file format. Use .xlsx or .csv in your filename!"
+                )
+
+            buffer.seek(0)
+            logger.info(f"Saving {file_name} to SharePoint: {sharepoint_folder_path}")
+            path_to_file = f"{sharepoint_folder_path.strip('/')}/{file_name}"
+            response = self.save_file_contents(
+                file_contents=buffer.getvalue(),
+                destination_path=path_to_file,
+            )
+            logger.info(f"Saved {file_name} to SharePoint: {sharepoint_folder_path}")
+            logger.info(response)
+
+    def get_searched_file_id_by_name(
+        self, searched_file_name: str, files: list[File]
+    ) -> File | None:
+        """Searched by given file_name by user"""
+        for file in files:
+            if file.name.upper() == searched_file_name.upper():
+                return file
+
+    def get_searched_file_name_by_id(
+        self, searched_file_id: str, files: list[File]
+    ) -> File | None:
+        """Searched by given file_name by user"""
+        for file in files:
+            if file.id == searched_file_id:
+                return file
+
+    def build_kql(self, file_name: str) -> str:
+        """Build a KQL query for searching folders by name.
+
+        Args:
+            file_name (str): Folder name to search for.
+
+        Returns:
+            str: KQL query string suitable for Microsoft Graph
+                Search API requests.
+        """
+        safe = file_name.replace('"', '\\"')
+        return f'(FileName:"{safe}" OR Title:"{safe}" AND IsContainer:true)'
+
+    def search_file_w_query(self, file_name: str) -> list[File]:
+        """Search for files by name using the Microsoft Graph Search API.
+
+        Executes a KQL-based search query against drive items and
+        collects all matching results across pages. The final result
+        set is filtered to include only files whose name exactly
+        matches the specified file name (case-insensitive).
+
+        Args:
+            file_name (str): Exact file name to search for.
+
+        Returns:
+            list[File]: A list of matching files containing their
+                names and identifiers.
+        """
+        logger.info(file_name)
+        endpoint = "/search/query"
+
+        files = []
+        start = 0
+
+        while True:
+            body = {
+                "requests": [
+                    {
+                        "entityTypes": ["driveItem"],
+                        "query": {"queryString": self.build_kql(file_name=file_name)},
+                        "fields": ["name", "id"],
+                        "region": "EMEA",
+                    }
+                ]
+            }
+
+            response = self.graph_connection.make_request(
+                method="POST", endpoint=endpoint, json=body
+            )
+
+            container = response.json()["value"][0]["hitsContainers"][0]
+
+            for hit in container.get("hits", []):
+                files.append(hit["resource"])
+
+            if not container.get("moreResultsAvailable"):
+                break
+
+            start += self.SEARCH_PAGE_SIZE
+
+        return [
+            File(file.get("name", ""), file.get("id", ""))
+            for file in files
+            if file.get("name", "").casefold() == file_name.casefold()
+        ]
+
+    def get_latest_file_from_sharepoint(
+        self, files: list[File], file_pattern
+    ) -> tuple[str | None, str | None]:
+        """
+        Get the name and id of the latest version of a file from SharePoint that matches the given pattern.
+        This function does not handle downloads!
+
+        Args:
+            files: list[File] list of File(s)
+            folder_path: The path to the folder in SharePoint. (Do NOT use '/' at the end of path!)
+            file_pattern: The pattern to match the file name (simple substring match).
+        """
+        # filter for the matching files: get the latest
+        matching_files = {
+            file.name: file.id
+            for file in files
+            if file_pattern in file.name
+            and (file.name.endswith(".csv") or file.name.endswith(".xlsx"))
+        }
+        # get the one with the latest date
+        latest_name = get_latest_dated_filename(matching_files.keys())
+        latest_id = matching_files.get(latest_name)
+        return (latest_name, latest_id)
+
+    def export_to_multisheet_excel(
+        self,
+        sheets: dict[str, pd.DataFrame],
+        file_name: str,
+        folder_path: str,
+        index: bool = False,
+        timestamp_format: str | None = None,
+        tz: tzinfo | None = None,
+    ) -> str:
+        """Write several DataFrames into one .xlsx workbook and upload it to SharePoint.
+
+        The workbook is built in memory (never touches local disk) and uploaded
+        via ``sp_conn.save_file_contents`` to ``<folder_path>/<file_name>``.
+
+        Args:
+            sheets: Mapping of sheet name -> DataFrame, written in dict order.
+                Excel limits sheet names to 31 characters and forbids ``[]:*?/\\``.
+            file_name: File name including ``.xlsx``. The caller decides the
+                name; if the file should be labelled with the period it covers
+                (rather than when it was produced), put that in here.
+            folder_path: Folder inside the drive, e.g. ``"Reports/2026"``.
+            index: Whether to write the DataFrame index. Defaults to False.
+            timestamp_format: Optional ``strftime`` pattern. When given, the
+                current time formatted with it is inserted before the extension:
+                ``report.xlsx`` -> ``report_2026-10-22T14-05-09.xlsx``. Useful
+                when every run should produce a distinct file.
+            tz: Zone for that timestamp. Defaults to UTC.
+
+        Returns:
+            The destination path inside the drive.
+        """
+        if not sheets:
+            raise ValueError("export_to_multisheet_excel needs at least one sheet")
+        if not file_name.endswith(".xlsx"):
+            raise ValueError(f"file_name must end with .xlsx, got {file_name!r}")
+        if timestamp_format:
+            stamp = datetime.now(tz or timezone.utc).strftime(timestamp_format)
+            fromatted_stamp = stamp.replace(" ", "_").replace(":", "-")
+            file_name = f"{file_name[:-5]}_{fromatted_stamp}.xlsx"
+        path_to_file = f"{folder_path.strip('/')}/{file_name}"
+        with BytesIO() as buffer:
+            with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
+                for sheet_name, df in sheets.items():
+                    df.to_excel(writer, sheet_name=sheet_name, index=index)
+            logger.info(f"Saving {path_to_file} to SharePoint")
+            self.save_file_contents(
+                file_contents=buffer.getvalue(),
+                destination_path=path_to_file,
+            )
+        logger.info(
+            f"Saved {path_to_file} to SharePoint",
+            extra={
+                "method": "export_to_excel",
+                "rows": sum(len(d) for d in sheets.values()),
+            },
+        )
+        return path_to_file
+
+
+class SharePointFolder:
+    """Service for managing SharePoint folders through Microsoft Graph.
+
+    Provides methods for searching, creating, retrieving, and
+    navigating folders within a specific SharePoint document
+    library (drive).
+
+    Attributes:
+        graph_connection (GraphClient): Authenticated Microsoft
+            Graph API client used to execute requests.
+        drive_id (str): Identifier of the SharePoint drive
+            (document library) where folder operations are
+            performed.
+
+    Class Attributes:
+        SEARCH_PAGE_SIZE (int): Number of search results to
+            retrieve per page when querying the Graph Search API.
+    """
+
+    SEARCH_PAGE_SIZE = 50
+
+    def __init__(self, graph_connection: GraphClient, drive_id: str) -> None:
+        """Initialize the service with a Microsoft Graph client and drive ID.
+
+        Args:
+            graph_connection (GraphClient): The client used to communicate with
+                the Microsoft Graph API.
+            drive_id (str): The unique identifier of the drive to operate on.
+        """
+        self.graph_connection = graph_connection
+        self.drive_id = drive_id
+
+    def create_folder(self, parent_folder_id: str, folder_name: str) -> dict:
+        """Create a new folder inside a specified parent folder.
+
+        Args:
+            parent_folder_id (str): The ID of the parent folder where the new
+                folder will be created.
+            folder_name (str): The name of the folder to create.
+
+        Returns:
+            dict: The JSON response containing the metadata of the newly
+                created folder.
+        """
+        data = {"name": folder_name, "folder": {}}
+        endpoint = f"/drives/{self.drive_id}/items/{parent_folder_id}/children"
+        return self.graph_connection.make_request(
+            method="POST", endpoint=endpoint, json=data
+        ).json()
+
+    def delete_folder(self, folder_id: str) -> requests.Response:
+        """Delete a folder from the drive.
+
+        Args:
+            folder_id (str): The ID of the folder to delete.
+
+        Returns:
+            requests.Response: The HTTP response returned by the Graph API.
+        """
+        endpoint = f"/drives/{self.drive_id}/items/{folder_id}"
+        return self.graph_connection.make_request(method="DELETE", endpoint=endpoint)
+
+    def list_sharepoint_folder_contents(
+        self,
+        folder_path: str | None = None,
+        folder_id: str | None = None,
+    ) -> FolderContents:
+        """List the contents of a SharePoint folder by path or ID.
+
+        Args:
+            folder_path (str | None): The path of the folder whose contents should
+                be listed. Give 'root' as default.
+            folder_id (str | None): The ID of the folder whose contents should be
+                listed. Give '/' as default.
+
+        Returns:
+            FolderContents: The folder contents separated into folders and files.
+
+        Raises:
+            ValueError: If neither folder_path nor folder_id is provided.
+        """
+        if folder_path:
+            # If root, use special case
+            if not (normalized_path := folder_path.lstrip("/")):
+                endpoint = f"/drives/{self.drive_id}/root/children"
+            else:
+                endpoint = f"/drives/{self.drive_id}/root:/{normalized_path}:/children"
+            response = self.graph_connection.make_request(
+                method="GET", endpoint=endpoint
+            ).json()
+        elif folder_id:
+            response = self.graph_connection.make_request(
+                method="GET",
+                endpoint=f"/drives/{self.drive_id}/items/{folder_id}/children",
+            ).json()
+        else:
+            raise ValueError("Either folder_path or folder_id must be provided.")
+
+        items = response.get("value", [])
+
+        files = [
+            File(name=item.get("name", ""), id=item.get("id", ""))
+            for item in items
+            if "folder" not in item
+        ]
+        folders = [
+            Folder(name=item.get("name", ""), id=item.get("id", ""))
+            for item in items
+            if "folder" in item
+        ]
+        return FolderContents(folders=folders, files=files)
+
+    def build_kql(self, folder_name: str) -> str:
+        """Build a KQL query for searching a folder by name.
+
+        Args:
+            folder_name (str): The name of the folder to search for.
+
+        Returns:
+            str: The URL-encoded KQL query used to search for a folder.
+        """
+        safe = folder_name.replace('"', '\\"')
+        return f'(FileName:"{safe}" OR Title:"{safe}" AND IsContainer:true)'
+
+    def search_folder_w_query(self, folder_name: str) -> list[Folder]:
+        """Search for folders by name using a Microsoft Graph search query.
+
+        Args:
+            folder_name (str): The name of the folder to search for.
+
+        Returns:
+            list[Folder]: A list of folders whose names exactly match the specified
+                folder name, using case-insensitive comparison.
+        """
+        endpoint = "/search/query"
+
+        folders = []
+        start = 0
+
+        while True:
+            body = {
+                "requests": [
+                    {
+                        "entityTypes": ["driveItem"],
+                        "query": {
+                            "queryString": self.build_kql(folder_name=folder_name)
+                        },
+                        "fields": ["name", "id"],
+                        "region": "EMEA",
+                    }
+                ]
+            }
+
+            response = self.graph_connection.make_request(
+                method="POST", endpoint=endpoint, json=body
+            )
+
+            container = response.json()["value"][0]["hitsContainers"][0]
+
+            for hit in container.get("hits", []):
+                folders.append(hit["resource"])
+
+            if not container.get("moreResultsAvailable"):
+                break
+
+            start += self.SEARCH_PAGE_SIZE
+
+        return [
+            Folder(folder.get("name", ""), folder.get("id", ""))
+            for folder in folders
+            if folder.get("name", "").casefold() == folder_name.casefold()
+        ]
+
+    def get_parent_folder(self, item_id: str) -> ParentItem:
+        """Get an item's parent folder and basic metadata.
+
+        Args:
+            item_id (str): The ID of the file or folder whose parent folder
+                should be retrieved.
+
+        Returns:
+            ParentItem: The item's metadata, including its ID, name, type,
+                and parent folder. The parent is None if the item has no
+                parent folder.
+        """
+        endpoint = f"/drives/{self.drive_id}/items/{item_id}?$select=id,name,folder,parentReference"
+
+        response = self.graph_connection.make_request(
+            method="GET", endpoint=endpoint
+        ).json()
+
+        # no parent_id of root
+        parent_reference = response.get("parentReference") or {}
+        parent = None
+
+        if parent_reference.get("id"):
+            path = parent_reference.get("path") or ""
+            name = parent_reference.get("name", "") or (
+                "root" if path.endswith("root:") else path.rsplit("/", 1)[-1]
+            )
+            parent = Folder(name=name, id=response.get("parentReference").get("id", ""))
+        return ParentItem(
+            item_id=response.get("id", ""),
+            item_name=response.get("name", ""),
+            item_type="folder" if "folder" in response else "file",
+            parent=parent,
+        )
+
+    def get_parent_chain(
+        self, item_id: str, _chain: list[ParentItem] | None = None, max_depth: int = 100
+    ) -> list[ParentItem]:
+        """Build the parent chain of an item recursively.
+
+        Args:
+            item_id (str): The ID of the item whose parent chain should be retrieved.
+            _chain (list[ParentItem] | None): The accumulated parent chain used
+                during recursive calls.
+            max_depth (int): The maximum allowed depth of the folder hierarchy.
+                Defaults to 100.
+
+        Returns:
+            list[ParentItem]: The parent chain from the specified item towards
+                the root folder.
+
+        Raises:
+            RecursionError: If the folder hierarchy exceeds the maximum allowed
+                depth.
+        """
+        chain = [] if _chain is None else _chain
+
+        if len(chain) >= max_depth:
+            raise RecursionError(f"It is too deep folder structure(>{max_depth})")
+
+        item = self.get_parent_folder(item_id=item_id)
+
+        # if the item is root
+        if item.parent is None:
+            return chain
+
+        chain.append(item)
+
+        return self.get_parent_chain(item_id=item.parent.id, _chain=chain)
+
+    def recursive_download_folder(
+        self, folder_id: str, local_base_path: str, exclude_patterns=None
+    ) -> None:
+        """
+        Recursively download all files from a SharePoint folder and its subfolders,
+        excluding files or folders whose names match any pattern in exclude_patterns.
+
+        Args:
+            folder_id: The ID of the folder to start from (e.g., "root" or a folder ID).
+            local_base_path: Local path to save files, will mirror SharePoint structure.
+            exclude_patterns: List of substrings or regex patterns to exclude.
+        """
+        exclude_patterns = exclude_patterns or []
+        contents = self.list_sharepoint_folder_contents(folder_id=folder_id)
+        logger.info(
+            f"Found file: {len(contents.files)} and folders: {len(contents.folders)} items under folder ID: {folder_id}"
+        )
+
+        # in case of folders
+        for item in contents.folders:
+            name = item.name
+            item_id = item.id
+            # Skip if name matches any exclude pattern
+            if any(re.search(pattern, name) for pattern in exclude_patterns):
+                logger.info(f"Excluded: {name}")
+                continue
+
+            subfolder_path = os.path.join(local_base_path, name)
+            os.makedirs(subfolder_path, exist_ok=True)
+            self.recursive_download_folder(
+                folder_id=item_id,
+                local_base_path=subfolder_path,
+                exclude_patterns=exclude_patterns,
+            )
+
+        # in case of files
+        for item in contents.files:
+            name = item.name
+            item_id = item.id
+            # Skip if name matches any exclude pattern
+            if any(re.search(pattern, name) for pattern in exclude_patterns):
+                logger.info(f"Excluded: {name}")
+                continue
+
+            file_contents = SharePointFile(
+                graph_connection=self.graph_connection, drive_id=self.drive_id
+            ).download_file_to_memory(file_id=item_id)
+            local_file_path = os.path.join(local_base_path, name)
+            with open(local_file_path, "wb") as f:
+                f.write(file_contents)
+            logger.info(f"Downloaded file: {local_file_path}")
+
+
+class SharePointList:
+    """Service for managing SharePoint lists through Microsoft Graph.
+
+    Provides methods for working with lists and list items within
+    a specific SharePoint site using the Microsoft Graph API.
+
+    Attributes:
+        graph_connection (GraphClient): Authenticated Microsoft Graph
+            API client used to execute requests.
+        site_id (str): Identifier of the SharePoint site where list
+            operations are performed.
+    """
+
+    def __init__(self, graph_connection: GraphClient, site_id: str) -> None:
+        """Initialize the service with a Microsoft Graph client and site ID.
+
+        Args:
+            graph_connection (GraphClient): The client used to communicate with
+                the Microsoft Graph API.
+            site_id (str): The unique identifier of the SharePoint site to operate on.
+        """
+        self.graph_connection = graph_connection
+        self.site_id = site_id
+
+    def get_lists(self, site_id: str) -> dict:
+        """Retrieve the lists available in a SharePoint site."""
+        return self.graph_connection.make_request(
+            method="GET", endpoint=f"/sites/{site_id}/lists"
+        ).json()
+
+    def get_list_items(self, site_id: str, list_id: str) -> dict:
+        """Retrieve items from a specific list in a SharePoint site, including fields."""
+        endpoint = f"/sites/{site_id}/lists/{list_id}/items?expand=fields"
+        return self.graph_connection.make_request(
+            method="GET", endpoint=endpoint
+        ).json()
