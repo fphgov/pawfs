@@ -8,7 +8,6 @@ from pawfs.log import logger
 from io import BytesIO
 import pandas as pd
 import os
-from urllib.parse import quote
 import re
 from datetime import datetime, timezone, tzinfo
 import requests
@@ -168,7 +167,16 @@ class SharePointFile:
 
     # TODO kiprobalni
     def copy_file(self, file_id: str, destination_folder_id: str) -> dict:
-        """Copy a file to a different folder within the same drive."""
+        """Copy a file to another folder within the same drive.
+
+        Args:
+            file_id (str): The unique identifier of the file to copy.
+            destination_folder_id (str): The unique identifier of the destination
+                folder.
+
+        Returns:
+            dict: The JSON response returned by the Graph API for the copy operation.
+        """
         data = {
             "parentReference": {"id": destination_folder_id},
             "name": None,  # Keep the same name
@@ -178,38 +186,27 @@ class SharePointFile:
             method="POST", endpoint=endpoint, data=data
         ).json()
 
-    def download_file_contents(self, file_id: str) -> Any:
-        """Load the contents of a file from a drive: not saving to disc. Just get the bytes"""
+    def download_file_to_memory(self, file_id: str) -> Any:
+        """Download the contents of a file from the drive without saving it to disk.
+
+        Args:
+            file_id (str): The unique identifier of the file to download.
+
+        Returns:
+            Any: The raw content of the downloaded file.
+        """
         endpoint = f"/drives/{self.drive_id}/items/{file_id}/content"
         return self.graph_connection.make_request(
             method="GET", endpoint=endpoint
         ).content
 
-    def download_file_by_opening(self, file_id: str, destination_path: str) -> str:
+    def download_file_to_local(self, file_id: str, destination_path: str) -> str:
         """Download a file from a drive to a physical path."""
-        contents = self.download_file_contents(file_id)
+        contents = self.download_file_to_memory(file_id)
         with open(destination_path, "wb") as file:
             file.write(contents)
         return destination_path
 
-    def download_file_general(self, item_id: str) -> dict:
-        """Download a file from the current SharePoint drive.
-
-        Retrieves the content of the file identified by the specified
-        item ID from the configured drive.
-
-        Args:
-            item_id (str): Unique identifier of the file to download.
-
-        Returns:
-            dict: JSON response returned by the Graph API.
-        """
-        endpoint = f"/drives/{self.drive_id}/items/{item_id}/content"
-        return self.graph_connection.make_request(
-            method="GET", endpoint=endpoint
-        ).json()
-
-    # TODO: kiprobalni
     def move_file(self, file_id: str, destination_folder_id: str) -> dict:
         """Move a file to a different folder within the same drive."""
         data = {"parentReference": {"id": destination_folder_id}}
@@ -218,9 +215,7 @@ class SharePointFile:
             method="PATCH", endpoint=endpoint, json=data
         ).json()
 
-    def read_table_from_sharepoint(
-        self, file_id: str, file_type="xlsx", **kwargs
-    ) -> Any:
+    def read_table_from_sharepoint(self, file_id: str, file_type: str, **kwargs) -> Any:
         """Reads a file from SharePoint and returns it as a DataFrame or a dictionary of DataFrames.
         Supports .xlsx and .csv
 
@@ -234,7 +229,7 @@ class SharePointFile:
             pd.DataFrame or dict: If file_type is "xlsx", returns a dictionary of DataFrames (sheets).
                                 If file_type is "csv", returns a single DataFrame.
         """
-        file_contents = self.download_file_contents(file_id=file_id)
+        file_contents = self.download_file_to_memory(file_id=file_id)
 
         with BytesIO(file_contents) as buffer:
             if file_type == "xlsx":
@@ -265,9 +260,9 @@ class SharePointFile:
     def upload_file_content(
         self,
         file_contents,
-        file_id: str | None,
         parent_folder_id: str | None,
-        file_name: str | None,
+        file_name: str | None = None,
+        file_id: str | None = None,
     ) -> requests.Response:
         """If file_id is added than the exist file will be replaced.
         If file_name is added than new file will be uploaded.
@@ -287,25 +282,47 @@ class SharePointFile:
     def upload_file(
         self,
         input_file_path: str,
-        file_id: str | None,
         parent_folder_id: str | None,
-        file_name: str | None,
+        file_id: str | None = None,
+        file_name: str | None = None,
     ) -> requests.Response:
-        """Upload new file or replace existed one.
-        If file_id is added than the exist file will be replaced.
-        If file_name is added than new file will be uploaded.
+        """Upload a local file to the current SharePoint drive.
+
+        Uploads the file located at the specified local path. If a file ID is
+        provided, the existing file is replaced. Otherwise, a new file is uploaded
+        to the specified parent folder.
+
+        Args:
+            input_file_path (str): Path to the local file to upload.
+            file_id (str | None): ID of the existing file to replace. If None,
+                a new file is uploaded.
+            parent_folder_id (str | None): ID of the destination folder for a new
+                file.
+            file_name (str | None): Name to use for the uploaded file.
+
+        Returns:
+            requests.Response: The HTTP response returned by the Graph API.
         """
-        with open(input_file_path, "rb") as file:
-            file_name = os.path.basename(input_file_path)
-            # remove _make_request it will force json! data= is the right way to send binary data
-            response = self.upload_file_content(
-                file_contents=file,
-                file_id=file_id,
-                parent_folder_id=parent_folder_id,
-                file_name=file_name,
-            )
-        logger.info(response)
-        return response
+        if file_name:
+            with open(input_file_path, "rb") as file:
+                response = self.upload_file_content(
+                    file_contents=file,
+                    parent_folder_id=parent_folder_id,
+                    file_name=file_name,
+                )
+            logger.info(response)
+            return response
+
+        if file_id:
+            with open(input_file_path, "rb") as file:
+                file_name = os.path.basename(input_file_path)
+                response = self.upload_file_content(
+                    file_contents=file,
+                    parent_folder_id=parent_folder_id,
+                    file_id=file_id,
+                )
+            logger.info(response)
+            return response
 
     def save_file_contents(self, file_contents: bytes, destination_path: str) -> dict:
         """Upload file contents (text or binary) to a specific path in a SharePoint drive."""
@@ -383,7 +400,7 @@ class SharePointFile:
             str: KQL query string suitable for Microsoft Graph
                 Search API requests.
         """
-        safe = quote(file_name.replace('"', '\\"'), safe="")
+        safe = file_name.replace('"', '\\"')
         return f'(FileName:"{safe}" OR Title:"{safe}" AND IsContainer:true)'
 
     def search_file_w_query(self, file_name: str) -> list[File]:
@@ -401,7 +418,7 @@ class SharePointFile:
             list[File]: A list of matching files containing their
                 names and identifiers.
         """
-
+        logger.info(file_name)
         endpoint = "/search/query"
 
         files = []
@@ -554,7 +571,6 @@ class SharePointFolder:
         self.graph_connection = graph_connection
         self.drive_id = drive_id
 
-    # TODO: kiprobalni
     def create_folder(self, parent_folder_id: str, folder_name: str) -> dict:
         """Create a new folder inside a specified parent folder.
 
@@ -585,43 +601,6 @@ class SharePointFolder:
         endpoint = f"/drives/{self.drive_id}/items/{folder_id}"
         return self.graph_connection.make_request(method="DELETE", endpoint=endpoint)
 
-    def list_folder_contents(self, folder_id: str = "root") -> dict:
-        """List the contents of a specified folder within the drive.
-
-        Args:
-            folder_id (str): The ID of the folder whose contents should be listed.
-                Defaults to "root".
-
-        Returns:
-            dict: The JSON response containing the files and folders within the
-                specified folder.
-        """
-        return self.graph_connection.make_request(
-            method="GET", endpoint=f"/drives/{self.drive_id}/items/{folder_id}/children"
-        ).json()
-
-    def list_folder_contents_by_path(self, folder_path: str = "/") -> dict:
-        """List the contents of a specified folder within the drive using its path.
-
-        Args:
-            folder_path (str): The path of the folder whose contents should be
-                listed. Defaults to "/", representing the root folder.
-
-        Returns:
-            dict: The JSON response containing the files and folders within the
-                specified folder.
-        """
-        # Ensure folder_path does not start with a slash (API might require this)
-        normalized_path = folder_path.lstrip("/")
-        # If root, use special case
-        if not normalized_path:
-            endpoint = f"/drives/{self.drive_id}/root/children"
-        else:
-            endpoint = f"/drives/{self.drive_id}/root:/{normalized_path}:/children"
-        return self.graph_connection.make_request(
-            method="GET", endpoint=endpoint
-        ).json()
-
     def list_sharepoint_folder_contents(
         self,
         folder_path: str | None = None,
@@ -631,9 +610,9 @@ class SharePointFolder:
 
         Args:
             folder_path (str | None): The path of the folder whose contents should
-                be listed. Defaults to None.
+                be listed. Give 'root' as default.
             folder_id (str | None): The ID of the folder whose contents should be
-                listed. Defaults to None.
+                listed. Give '/' as default.
 
         Returns:
             FolderContents: The folder contents separated into folders and files.
@@ -642,13 +621,24 @@ class SharePointFolder:
             ValueError: If neither folder_path nor folder_id is provided.
         """
         if folder_path:
-            response = self.list_folder_contents_by_path(folder_path)
+            # If root, use special case
+            if not (normalized_path := folder_path.lstrip("/")):
+                endpoint = f"/drives/{self.drive_id}/root/children"
+            else:
+                endpoint = f"/drives/{self.drive_id}/root:/{normalized_path}:/children"
+            response = self.graph_connection.make_request(
+                method="GET", endpoint=endpoint
+            ).json()
         elif folder_id:
-            response = self.list_folder_contents(folder_id)
+            response = self.graph_connection.make_request(
+                method="GET",
+                endpoint=f"/drives/{self.drive_id}/items/{folder_id}/children",
+            ).json()
         else:
             raise ValueError("Either folder_path or folder_id must be provided.")
 
         items = response.get("value", [])
+
         files = [
             File(name=item.get("name", ""), id=item.get("id", ""))
             for item in items
@@ -670,7 +660,7 @@ class SharePointFolder:
         Returns:
             str: The URL-encoded KQL query used to search for a folder.
         """
-        safe = quote(folder_name.replace('"', '\\"'), safe="")
+        safe = folder_name.replace('"', '\\"')
         return f'(FileName:"{safe}" OR Title:"{safe}" AND IsContainer:true)'
 
     def search_folder_w_query(self, folder_name: str) -> list[Folder]:
@@ -758,7 +748,7 @@ class SharePointFolder:
         )
 
     def get_parent_chain(
-        self, item_id: str, _chain: list[ParentItem] | None, max_depth: int = 100
+        self, item_id: str, _chain: list[ParentItem] | None = None, max_depth: int = 100
     ) -> list[ParentItem]:
         """Build the parent chain of an item recursively.
 
@@ -805,31 +795,44 @@ class SharePointFolder:
             exclude_patterns: List of substrings or regex patterns to exclude.
         """
         exclude_patterns = exclude_patterns or []
-        contents = self.list_folder_contents(folder_id=folder_id).get("value", [])
-        logger.info(f"Found {len(contents)} items under folder ID: {folder_id}")
-        for item in contents:
-            name = item.get("name")
-            item_id = item.get("id")
+        contents = self.list_sharepoint_folder_contents(folder_id=folder_id)
+        logger.info(
+            f"Found file: {len(contents.files)} and folders: {len(contents.folders)} items under folder ID: {folder_id}"
+        )
+
+        # in case of folders
+        for item in contents.folders:
+            name = item.name
+            item_id = item.id
             # Skip if name matches any exclude pattern
             if any(re.search(pattern, name) for pattern in exclude_patterns):
                 logger.info(f"Excluded: {name}")
                 continue
-            if item.get("folder"):  # It's a folder
-                subfolder_path = os.path.join(local_base_path, name)
-                os.makedirs(subfolder_path, exist_ok=True)
-                self.recursive_download_folder(
-                    folder_id=item_id,
-                    local_base_path=subfolder_path,
-                    exclude_patterns=exclude_patterns,
-                )
-            else:  # It's a file
-                file_contents = SharePointFile(
-                    graph_connection=self.graph_connection, drive_id=self.drive_id
-                ).download_file_contents(file_id=item_id)
-                local_file_path = os.path.join(local_base_path, name)
-                with open(local_file_path, "wb") as f:
-                    f.write(file_contents)
-                logger.info(f"Downloaded file: {local_file_path}")
+
+            subfolder_path = os.path.join(local_base_path, name)
+            os.makedirs(subfolder_path, exist_ok=True)
+            self.recursive_download_folder(
+                folder_id=item_id,
+                local_base_path=subfolder_path,
+                exclude_patterns=exclude_patterns,
+            )
+
+        # in case of files
+        for item in contents.files:
+            name = item.name
+            item_id = item.id
+            # Skip if name matches any exclude pattern
+            if any(re.search(pattern, name) for pattern in exclude_patterns):
+                logger.info(f"Excluded: {name}")
+                continue
+
+            file_contents = SharePointFile(
+                graph_connection=self.graph_connection, drive_id=self.drive_id
+            ).download_file_to_memory(file_id=item_id)
+            local_file_path = os.path.join(local_base_path, name)
+            with open(local_file_path, "wb") as f:
+                f.write(file_contents)
+            logger.info(f"Downloaded file: {local_file_path}")
 
 
 class SharePointList:
