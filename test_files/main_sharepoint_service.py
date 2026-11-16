@@ -25,26 +25,30 @@ conn = GraphClient(
     ),
 )
 
+##########################################################################
 # SiteInfo by web url name
 siteinfo = SharePointService(conn).get_site_by_web_rel_url(
     hostname="budapestfph.sharepoint.com", url_name="ai"
 )
 logger.info(siteinfo)
 
-# Get all drives(get_drives) on site or drive(get_drive) = default folder
+##########################################################################
+# get_drives: gives back all drive under a given site
 drives = SharePointService(conn).get_drives(site_id=siteinfo.id)
+
+# get_drie: gives back site's default document library
 # drives = SharePointService(conn).get_drive(site_id=siteinfo.id)
 
 logger.info(drives)
-
+##########################################################################
 # get drive-id
 drive_id = SharePointService(conn).get_drive_id_by_weburl(
-    drives=drives,
+    site_id=siteinfo.id,
     web_url="https://budapestfph.sharepoint.com/sites/ai/Shared%20Documents",
 )
 
 logger.info(drive_id)
-
+##########################################################################
 # list SharePoint folder
 folder_contents = SharePointFolder(
     graph_connection=conn, drive_id=drive_id

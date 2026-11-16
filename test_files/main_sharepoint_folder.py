@@ -34,26 +34,26 @@ siteinfo = SharePointService(conn).get_site_by_web_rel_url(
     hostname="budapestfph.sharepoint.com", url_name="ai"
 )
 logger.info(siteinfo)
-
+##########################################################################
 # Get all drives(get_drives) on site or drive(get_drive) = default folder
-drives = SharePointService(conn).get_drives(site_id=siteinfo.id)
+# drives = SharePointService(conn).get_drives(site_id=siteinfo.id)
 # drives = SharePointService(conn).get_drive(site_id=siteinfo.id)
-logger.info(drives)
-
+# logger.info(drives)
+##########################################################################
 # get drive id, it is necessary for a lot of requests
 drive_id = SharePointService(conn).get_drive_id_by_weburl(
-    drives=drives,
+    site_id=siteinfo.id,
     web_url="https://budapestfph.sharepoint.com/sites/ai/Shared%20Documents",
 )
 logger.info(drive_id)
-
+##########################################################################
 # list folder contents
 """folder_contents = SharePointFolder(
     graph_connection=conn, drive_id=drive_id
-).list_sharepoint_folder_contents(folder_path="/DEV_Data_pipeline_interim/koltsegvetes")
+).list_sharepoint_folder_contents(folder_path="/DEV_Data_pipeline_interim")
 
 logger.info(folder_contents)"""
-
+##########################################################################
 # search folder with query
 """searched_folder = SharePointFolder(
     graph_connection=conn, drive_id=drive_id
@@ -61,7 +61,7 @@ logger.info(folder_contents)"""
     folder_name="koltsegvetes"
 )
 logger.info(searched_folder)"""
-
+##########################################################################
 # create folder
 """response = SharePointFolder(
     graph_connection=conn, drive_id=drive_id
@@ -70,7 +70,7 @@ logger.info(searched_folder)"""
     folder_name="create_test"
 )
 logger.info(response)"""
-
+##########################################################################
 # delete folder
 """response = SharePointFolder(
     graph_connection=conn, drive_id=drive_id
@@ -78,15 +78,15 @@ logger.info(response)"""
     folder_id="xxxx"
 )
 logger.info(response)"""
-
+##########################################################################
 # get parent folder
 """response = SharePointFolder(
     graph_connection=conn, drive_id=drive_id
 ).get_parent_folder(
-    item_id="01CLWSBQO4GIVE4Q5SDNDJ5CCC5QI5FX5P"
+    item_id="01CLWSBQJIWO724GG2CVDLFNAZ3ZLNX5H6"
 )
 logger.info(response)"""
-
+##########################################################################
 # get parent folders until root
 """response = SharePointFolder(
     graph_connection=conn, drive_id=drive_id
@@ -95,7 +95,7 @@ logger.info(response)"""
 )
 
 logger.info(response)"""
-
+##########################################################################
 # resursive download folder
 """response = SharePointFolder(
     graph_connection=conn, drive_id=drive_id

@@ -113,25 +113,21 @@ class SharePointService:
 
         return drives
 
-    def get_drive_id_by_weburl(
-        self, drives: DriveInfo | list[DriveInfo], web_url: str
-    ) -> str | None:
+    def get_drive_id_by_weburl(self, site_id: str, web_url: str) -> str | None:
         """Return the drive ID matching the specified web URL.
 
         Args:
-            drives (DriveInfo | list[DriveInfo]): One or more drives to search.
+            site_id (str): Unique identifier of the SharePoint site.
             web_url (str): Drive web URL to match.
 
         Returns:
             str | None: The matching drive ID, or None if no matching
                 drive is found.
         """
+        drives = self.get_drives(site_id=site_id)
 
-        if isinstance(drives, list):
-            for drive in drives:
-                return drive.id if drive.web_url == web_url else None
-        if isinstance(drives, DriveInfo):
-            return drives.id if drives.web_url == web_url else None
+        for drive in drives:
+            return drive.id if drive.web_url == web_url else None
 
 
 class SharePointFile:
@@ -394,7 +390,10 @@ class SharePointFile:
         """Build a KQL query for searching folders by name.
 
         Args:
-            file_name (str): Folder name to search for.
+            file_name (str): Folder name to search for. DO NOT use
+            urllib.parse.quote function because it will change the characters in
+            file name for instance white space to %20 and macron and won't be
+            able to find the exact file with it's name.
 
         Returns:
             str: KQL query string suitable for Microsoft Graph
@@ -519,7 +518,9 @@ class SharePointFile:
             stamp = datetime.now(tz or timezone.utc).strftime(timestamp_format)
             fromatted_stamp = stamp.replace(" ", "_").replace(":", "-")
             file_name = f"{file_name[:-5]}_{fromatted_stamp}.xlsx"
+
         path_to_file = f"{folder_path.strip('/')}/{file_name}"
+
         with BytesIO() as buffer:
             with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
                 for sheet_name, df in sheets.items():
@@ -529,6 +530,7 @@ class SharePointFile:
                 file_contents=buffer.getvalue(),
                 destination_path=path_to_file,
             )
+
         logger.info(
             f"Saved {path_to_file} to SharePoint",
             extra={
@@ -536,6 +538,7 @@ class SharePointFile:
                 "rows": sum(len(d) for d in sheets.values()),
             },
         )
+
         return path_to_file
 
 
@@ -656,6 +659,9 @@ class SharePointFolder:
 
         Args:
             folder_name (str): The name of the folder to search for.
+            DO NOT use urllib.parse.quote function because it will change the
+            characters in folder name for instance white space to %20
+            and macron and won't be able to find the exact folder with it's name.
 
         Returns:
             str: The URL-encoded KQL query used to search for a folder.

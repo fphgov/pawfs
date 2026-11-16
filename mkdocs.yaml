@@ -1,0 +1,23 @@
+site_name: Pawfs Documentation
+
+plugins:
+- mkdocstrings:
+    handlers:
+      python:
+        options:
+          docstring_style: google  # Or "numpy" or "restructured"
+          show_root_full_docstring: true
+          show_source: true
+          show_signature: true
+          merge_init_into_class: true
+- search
+
+
+nav:
+- Home: index.md
+- Structure:
+    - sharepoint_service: sharepoint_service.md
+    - graph_client: graph_client.md
+    # - processed: ceges_processed.md
+
+theme: readthedocs

@@ -11,9 +11,9 @@ from pawfs import (
 
 """from pawfs import (
     SharePointFile
-)"""
-
-"""import pandas as pd
+)
+import os
+import pandas as pd
 from zoneinfo import ZoneInfo"""
 
 now = datetime.now()
@@ -37,29 +37,28 @@ siteinfo = SharePointService(conn).get_site_by_web_rel_url(
     hostname="budapestfph.sharepoint.com", url_name="ai"
 )
 logger.info(siteinfo)
-
+##########################################################################
 # Get all drives(get_drives) on site or drive(get_drive) = default folder
-drives = SharePointService(conn).get_drives(site_id=siteinfo.id)
+# drives = SharePointService(conn).get_drives(site_id=siteinfo.id)
 # drives = SharePointService(conn).get_drive(site_id=siteinfo.id)
-logger.info(drives)
-
+# logger.info(drives)
+##########################################################################
 # get drive id, it is necessary for a lot of requests
 drive_id = SharePointService(conn).get_drive_id_by_weburl(
-    drives=drives,
+    site_id=siteinfo.id,
     web_url="https://budapestfph.sharepoint.com/sites/ai/Shared%20Documents",
 )
 logger.info(drive_id)
-
+##########################################################################
 # list folder contents
 folder_contents = SharePointFolder(
     graph_connection=conn, drive_id=drive_id
 ).list_sharepoint_folder_contents(folder_path="DEV_Data_pipeline_interim")
 
 logger.info(folder_contents)
-
+##########################################################################
 # download file to local
-"""
-destination_path=f'/home/orban.nagy.z/projects/pawfs/data/{folder_contents.files[0].name}'
+"""destination_path=f'/home/orban.nagy.z/projects/pawfs/data/{folder_contents.files[0].name}'
 local_file_path = SharePointFile(
     graph_connection=conn,
     drive_id=drive_id
@@ -67,28 +66,28 @@ local_file_path = SharePointFile(
     file_id=folder_contents.files[0].id,
     destination_path=destination_path
 )"""
-
+##########################################################################
 # move file
 """local_file_path = SharePointFile(
     graph_connection=conn,
     drive_id=drive_id
 ).move_file(
     file_id=folder_contents.files[0].id,
-    destination_folder_id="01CLWSBQO4GIVE4Q5SDNDJ5CCC5QI5FX5P"
+    destination_folder_id="01CLWSBQLXSOBMNENIA5GJGAMKEUY3YML3"
 )
 logger.info(local_file_path)"""
-
+##########################################################################
 # read data from xlsx or csv to sheets and df
 # search for file in folder contents with file name to get file id
-"""file= SharePointFile(
+"""file = SharePointFile(
     graph_connection=conn,
     drive_id=drive_id
 ).get_searched_file_id_by_name(
     searched_file_name="name_mapping_export.csv",
     files=folder_contents.files
 )
-logger.info(file)
-sheets_or_df = SharePointFile(
+logger.info(file)"""
+"""sheets_or_df = SharePointFile(
     graph_connection=conn,
     drive_id=drive_id
 ).read_table_from_sharepoint(
@@ -96,7 +95,7 @@ sheets_or_df = SharePointFile(
     file_type='csv'
 )
 logger.info(sheets_or_df)"""
-
+##########################################################################
 # upload file
 # search folder id
 """folder = SharePointFolder(
@@ -105,9 +104,9 @@ logger.info(sheets_or_df)"""
 ).search_folder_w_query(
     folder_name='DEV_Data_pipeline_interim'
 )
-logger.info(folder)"""
+logger.info(folder)
 # upload with file_name
-"""response = SharePointFile(
+response = SharePointFile(
     graph_connection=conn,
     drive_id=drive_id
 ).upload_file(
@@ -115,7 +114,7 @@ logger.info(folder)"""
     parent_folder_id=folder[0].id,
     file_name=os.path.basename('/home/orban.nagy.z/projects/pawfs/data/name_mapping_export.csv')
 )"""
-
+##########################################################################
 # upload with file_id
 """response = SharePointFile(
     graph_connection=conn,
@@ -125,7 +124,7 @@ logger.info(folder)"""
     parent_folder_id=folder[0].id,
     file_id="01CLWSBQKHDL5N6FDKNRGYW6QKNJNQ2GGH"
 )"""
-
+##########################################################################
 # save df to sharepoint
 """data = {
     "nev": ["Anna", "Bela", "Csilla", "David"],
@@ -144,7 +143,7 @@ response = SharePointFile(
     sharepoint_folder_path="/DEV_Data_pipeline_interim/"
 )
 logger.info(response)"""
-
+##########################################################################
 # search file with query with exact match
 """response = SharePointFile(
     graph_connection=conn,
@@ -153,7 +152,7 @@ logger.info(response)"""
     file_name="Szilvi gombja észrevételek.docx"
 )
 logger.info(response)"""
-
+##########################################################################
 # get latest file from SharePoint
 """folder_contents = SharePointFolder(
     graph_connection=conn, drive_id=drive_id
@@ -168,7 +167,7 @@ response = SharePointFile(
 )
 
 logger.info(response)"""
-
+##########################################################################
 # export to multiple sheet excel
 """data_first = {
     "nev": ["Anna", "Bela", "Csilla", "David"],
