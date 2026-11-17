@@ -1,5 +1,5 @@
-`SharePointService` dokumentáció
----
+# `SharePointService`
+
 A `SharePointService` magas szintű műveleteket biztosít SharePoint-erőforrások kezeléséhez a Microsoft Graph API-n keresztül. A szolgáltatás egy hitelesített `GraphClient` példányt használ SharePoint-webhelyek és dokumentumtárak lekérdezésére.
 #Függőségek
 A class használatához az alábbi típusoknak és objektumoknak elérhetőnek kell lenniük:<br>
@@ -29,7 +29,7 @@ service = SharePointService(graph_connection=graph_client)
 ```python
 def get_site_by_web_rel_url(self, hostname: str, url_name: str) -> SiteInfo
 ```
-Lekéri egy SharePoint-webhely adatait a hostname és a webhely relatív URL-je alapján. Többségében az `id`-ra van szükségünk a `SiteInfo`-ból.
+Lekéri egy SharePoint-webhely adatait a hostname és a webhely relatív URL-je alapján. 
 
 <u>Graph végpont:</u>
 ```http
@@ -49,7 +49,8 @@ GET /sites/{hostname}:/sites/{url_name}
 `name`
 `web_url`
 `display_name`
-`site_collection`
+`site_collection`<br>
+Többségében az `id`-ra van szükségünk a `SiteInfo`-ból.
 
 <u>Példa:</u>
 ```python
@@ -66,7 +67,7 @@ Bármilyen file vagy folder lekérésünk lesz, minden esetben a `SiteInfo` `id`
 ```python
 def get_drive(self, site_id: str) -> DriveInfo
 ```
-Lekéri a megadott SharePoint-webhely alapértelmezett dokumentumtárát.
+Lekéri a megadott SharePoint-webhely alapértelmezett dokumentumtárát(drive-ját).
 
 <u>Graph végpont:</u>
 ```http
@@ -98,7 +99,7 @@ print(drive.name)
 ```python
 def get_drives(self, site_id: str) -> list[DriveInfo]
 ```
-Lekéri a SharePoint-webhelyhez tartozó összes dokumentumtárat.
+Lekéri a SharePoint-webhelyhez tartozó összes dokumentumtárat(drive-ját).
 
 <u>Graph végpont:</u>
 ```http
@@ -132,7 +133,7 @@ def get_drive_id_by_weburl(
     web_url: str,
 ) -> str | None
 ```
-Megkeresi a megadott webes URL-hez tartozó dokumentumtár azonosítóját.
+Megkeresi a megadott webes URL-hez tartozó dokumentumtár(drive) azonosítóját.
 
 <u>Paraméterek:</u>
 

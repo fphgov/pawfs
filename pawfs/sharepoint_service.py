@@ -161,7 +161,6 @@ class SharePointFile:
         self.graph_connection = graph_connection
         self.drive_id = drive_id
 
-    # TODO kiprobalni
     def copy_file(self, file_id: str, destination_folder_id: str) -> dict:
         """Copy a file to another folder within the same drive.
 
@@ -205,10 +204,10 @@ class SharePointFile:
 
     def move_file(self, file_id: str, destination_folder_id: str) -> dict:
         """Move a file to a different folder within the same drive."""
-        data = {"parentReference": {"id": destination_folder_id}}
+        json = {"parentReference": {"id": destination_folder_id}}
         endpoint = f"/drives/{self.drive_id}/items/{file_id}"
         return self.graph_connection.make_request(
-            method="PATCH", endpoint=endpoint, json=data
+            method="PATCH", endpoint=endpoint, json=json
         ).json()
 
     def read_table_from_sharepoint(self, file_id: str, file_type: str, **kwargs) -> Any:
@@ -586,10 +585,10 @@ class SharePointFolder:
             dict: The JSON response containing the metadata of the newly
                 created folder.
         """
-        data = {"name": folder_name, "folder": {}}
+        json = {"name": folder_name, "folder": {}}
         endpoint = f"/drives/{self.drive_id}/items/{parent_folder_id}/children"
         return self.graph_connection.make_request(
-            method="POST", endpoint=endpoint, json=data
+            method="POST", endpoint=endpoint, json=json
         ).json()
 
     def delete_folder(self, folder_id: str) -> requests.Response:
@@ -789,7 +788,10 @@ class SharePointFolder:
         return self.get_parent_chain(item_id=item.parent.id, _chain=chain)
 
     def recursive_download_folder(
-        self, folder_id: str, local_base_path: str, exclude_patterns=None
+        self,
+        folder_id: str,
+        local_base_path: str,
+        exclude_patterns: list[str] | None = None,
     ) -> None:
         """
         Recursively download all files from a SharePoint folder and its subfolders,

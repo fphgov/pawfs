@@ -16,8 +16,10 @@ plugins:
 nav:
 - Home: index.md
 - Structure:
-    - sharepoint_service: sharepoint_service.md
     - graph_client: graph_client.md
-    # - processed: ceges_processed.md
+    - error: error.md
+    - sharepoint_service: sharepoint_service.md
+    - sharepoint_file: sharepoint_file.md
+    - sharepoint_folder: sharepoint_folder.md
 
 theme: readthedocs

@@ -108,7 +108,7 @@ class GraphClient:
             Graph API.
 
         Raises:
-            GraphApiError: If the Graph API returns a non-success
+            GraphError: If the Graph API returns a non-success
                 status code.
         """
 
