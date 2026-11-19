@@ -427,7 +427,7 @@ A dátum szerinti kiválasztást a `get_latest_dated_filename()` segédfüggvén
 
 |Név|Típus|Leírás|
 |---|-----|------|
-|`files`|`list[File]`|A vizsgálandó fájlok listája.|
+|`folder_path`|`str`|Folder Sharepoint-os elérése, ahol keressük az időben legutolsó file-t.|
 |`file_pattern`||A fájlnévben keresett szövegrészlet. Javasolt típusjelölése `str`.|
 
 <u>Visszatérési érték:</u><br>

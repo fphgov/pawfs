@@ -455,17 +455,24 @@ class SharePointFile:
         ]
 
     def get_latest_file_from_sharepoint(
-        self, files: list[File], file_pattern
+        self, folder_path: str, file_pattern
     ) -> tuple[str | None, str | None]:
         """
         Get the name and id of the latest version of a file from SharePoint that matches the given pattern.
         This function does not handle downloads!
 
         Args:
-            files: list[File] list of File(s)
             folder_path: The path to the folder in SharePoint. (Do NOT use '/' at the end of path!)
             file_pattern: The pattern to match the file name (simple substring match).
         """
+        # list folder
+        folder_contents = SharePointFolder(
+            graph_connection=self.graph_connection, drive_id=self.drive_id
+        ).list_sharepoint_folder_contents(folder_path=folder_path)
+
+        # get files
+        files = folder_contents.files
+
         # filter for the matching files: get the latest
         matching_files = {
             file.name: file.id

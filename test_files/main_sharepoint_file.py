@@ -154,15 +154,11 @@ logger.info(response)"""
 logger.info(response)"""
 ##########################################################################
 # get latest file from SharePoint
-"""folder_contents = SharePointFolder(
-    graph_connection=conn, drive_id=drive_id
-).list_sharepoint_folder_contents(folder_id="01CLWSBQKL4W72XNIEWFGJLYRGIQJBAJXK")
-
-response = SharePointFile(
+"""response = SharePointFile(
     graph_connection=conn,
     drive_id=drive_id
 ).get_latest_file_from_sharepoint(
-    files=folder_contents.files,
+    folder_path="DEV_Data_pipeline_interim/koltsegvetes",
     file_pattern="KGR_intézményi_tény_"
 )
 
