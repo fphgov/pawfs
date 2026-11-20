@@ -5,7 +5,6 @@ from pawfs import (
     logger,
     GraphClient,
     SharePointService,
-    SharePointFolder,
     get_secret,
 )
 
@@ -50,12 +49,18 @@ drive_id = SharePointService(conn).get_drive_id_by_weburl(
 )
 logger.info(drive_id)
 ##########################################################################
+# search file, folder by item_id
+response = SharePointService(conn).search_item_by_item_id(
+    drive_id=drive_id, item_id="01CLWSBQM56VXKJZKKZFF2CFKA6YMWBFQV"
+)
+logger.info(response)
+##########################################################################
 # list folder contents
-folder_contents = SharePointFolder(
+"""folder_contents = SharePointFolder(
     graph_connection=conn, drive_id=drive_id
 ).list_sharepoint_folder_contents(folder_path="DEV_Data_pipeline_interim")
 
-logger.info(folder_contents)
+logger.info(folder_contents)"""
 ##########################################################################
 # download file to local
 """destination_path=f'/home/orban.nagy.z/projects/pawfs/data/{folder_contents.files[0].name}'

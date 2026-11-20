@@ -155,3 +155,33 @@ drive_id = service.get_drive_id_by_weburl(
 
 print(f"Drive ID: {drive_id}")
 ```
+
+* <u>search_item_by_item_id():</u>
+```python
+def search_item_by_item_id(
+    self, 
+    drive_id: str, 
+    item_id: str
+    ) -> File | Folder:
+```
+Megkeresi `item-id` alapján a file-t vagy folder-t.
+
+<u>Paraméterek:</u>
+
+|Paraméter|Típus|Leírás|
+|---------|-----|------|
+|`drive_id`|`str`|Drive id.|
+|`item_id`|`str`|A keresett file vagy folder `id`-ja.|
+
+<u>Visszatérési érték:</u>
+Visszatér a file vagy folder típussal, név és id-val.
+
+<u>Példa:</u>
+```python
+response = SharePointService(conn).search_item_by_item_id(
+    drive_id=drive_id,
+    item_id="01CLWSBQM56VXKJZKKZFF2CFKA6YMWBFQV"
+)
+
+print(f"File vagy folder: {response}")
+```

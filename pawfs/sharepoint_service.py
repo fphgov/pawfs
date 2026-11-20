@@ -129,6 +129,29 @@ class SharePointService:
         for drive in drives:
             return drive.id if drive.web_url == web_url else None
 
+    def search_item_by_item_id(self, drive_id: str, item_id: str) -> File | Folder:
+        """Retrieve a file or folder from a drive by its item ID.
+
+        Args:
+            drive_id (str): The ID of the drive containing the item.
+            item_id (str): The ID of the item to retrieve.
+
+        Returns:
+            File | Folder: A File object if the item is a file, or a Folder
+            object if the item is a folder.
+        """
+        endpoint = f"/drives/{drive_id}/items/{item_id}"
+
+        response = self.graph_connection.make_request(method="GET", endpoint=endpoint)
+
+        item = response.json()
+
+        if "file" in item.keys():
+            return File(name=item.get("name", ""), id=item.get("id", ""))
+
+        if "folder" in item.keys():
+            return Folder(name=item.get("name", ""), id=item.get("id", ""))
+
 
 class SharePointFile:
     """Provides file operations for a specific SharePoint drive.
