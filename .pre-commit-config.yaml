@@ -1,0 +1,33 @@
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.11.9
+    hooks:
+      - id: ruff
+        args: [--fix]
+        name: ruff-autolint
+        types: [python]
+        stages: [pre-commit]
+      - id: ruff-format
+        name: ruff-autoformat
+        types: [python]
+        stages: [pre-commit]
+
+  - repo: https://github.com/pre-commit/pygrep-hooks
+    rev: v1.10.0
+    hooks:
+      - id: python-no-eval
+      - id: python-use-type-annotations
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: check-added-large-files
+      - id: check-yaml
+      - id: debug-statements
+
+  - repo: https://github.com/pycqa/pydocstyle
+    rev: 6.3.0
+    hooks:
+      - id: pydocstyle
+        args: [--select=D1]  # Only enforce presence of docstrings
+        
