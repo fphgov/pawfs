@@ -215,7 +215,7 @@ class SharePointFile:
             Any: The raw content of the downloaded file.
         """
         endpoint = f"/drives/{self.drive_id}/items/{file_id}/content"
-        logger.info(endpoint)
+        logger.info(f"***************************{endpoint}")
         return self.graph_connection.make_request(
             method="GET", endpoint=endpoint
         ).content
