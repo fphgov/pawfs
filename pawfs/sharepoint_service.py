@@ -204,6 +204,7 @@ class SharePointFile:
             method="POST", endpoint=endpoint, data=data
         ).json()
 
+    # TODO
     def download_file_to_memory(self, file_id: str) -> Any:
         """Download the contents of a file from the drive without saving it to disk.
 
@@ -214,6 +215,7 @@ class SharePointFile:
             Any: The raw content of the downloaded file.
         """
         endpoint = f"/drives/{self.drive_id}/items/{file_id}/content"
+        logger.info(f"***************************{endpoint}")
         return self.graph_connection.make_request(
             method="GET", endpoint=endpoint
         ).content
