@@ -5,9 +5,10 @@ from pawfs import (
     logger,
     GraphClient,
     SharePointService,
-    SharePointFolder,
     get_secret,
 )
+
+"""from pawfs import SharePointFolder"""
 
 now = datetime.now()
 current_datetime = now.strftime("%Y-%m-%d %H:%M:%S")
@@ -27,31 +28,37 @@ conn = GraphClient(
 
 ##########################################################################
 # SiteInfo by web url name
-siteinfo = SharePointService(conn).get_site_by_web_rel_url(
+"""siteinfo = SharePointService(conn).get_site_by_web_rel_url(
     hostname="budapestfph.sharepoint.com", url_name="ai"
 )
-logger.info(siteinfo)
+logger.info(siteinfo)"""
 
 ##########################################################################
 # get_drives: gives back all drive under a given site
-drives = SharePointService(conn).get_drives(site_id=siteinfo.id)
+"""drives = SharePointService(conn).get_drives(site_id=siteinfo.id)
 
 # get_drie: gives back site's default document library
 # drives = SharePointService(conn).get_drive(site_id=siteinfo.id)
 
-logger.info(drives)
+logger.info(drives)"""
 ##########################################################################
 # get drive-id
-drive_id = SharePointService(conn).get_drive_id_by_weburl(
+"""drive_id = SharePointService(conn).get_drive_id_by_weburl(
     site_id=siteinfo.id,
     web_url="https://budapestfph.sharepoint.com/sites/ai/Shared%20Documents",
 )
 
-logger.info(drive_id)
+logger.info(drive_id)"""
+##########################################################################
+# get drive info by drive_id
+drive_info = SharePointService(conn).get_drive_info_by_drive_id(
+    drive_id="b!RUt2oP_4TkC-_CWvoUNx68fBAJEFtTxEinZJRKEPP-DYmkAGsYbDR70aG3nMatWL"
+)
+logger.info(drive_info)
 ##########################################################################
 # list SharePoint folder
-folder_contents = SharePointFolder(
+"""folder_contents = SharePointFolder(
     graph_connection=conn, drive_id=drive_id
 ).list_sharepoint_folder_contents(folder_path="DEV_Data_pipeline_interim")
 
-logger.info(folder_contents)
+logger.info(folder_contents)"""

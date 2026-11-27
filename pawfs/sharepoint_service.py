@@ -113,6 +113,21 @@ class SharePointService:
 
         return drives
 
+    def get_drive_info_by_drive_id(self, drive_id: str) -> dict:
+        """Retrieves drive information by its drive ID.
+
+        Args:
+            drive_id (str): The unique identifier of the drive.
+
+        Returns:
+            dict: The drive information returned by the Microsoft Graph API.
+        """
+        endpoint = f"/drives/{drive_id}"
+
+        return self.graph_connection.make_request(
+            method="GET", endpoint=endpoint
+        ).json()
+
     def get_drive_id_by_weburl(self, site_id: str, web_url: str) -> str | None:
         """Return the drive ID matching the specified web URL.
 
@@ -204,7 +219,6 @@ class SharePointFile:
             method="POST", endpoint=endpoint, data=data
         ).json()
 
-    # TODO
     def download_file_to_memory(self, file_id: str) -> Any:
         """Download the contents of a file from the drive without saving it to disk.
 
@@ -215,7 +229,7 @@ class SharePointFile:
             Any: The raw content of the downloaded file.
         """
         endpoint = f"/drives/{self.drive_id}/items/{file_id}/content"
-        logger.info(f"***************************{endpoint}")
+        logger.info(endpoint)
         return self.graph_connection.make_request(
             method="GET", endpoint=endpoint
         ).content
